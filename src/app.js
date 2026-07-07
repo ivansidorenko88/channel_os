@@ -1,0 +1,21 @@
+const { Telegraf } = require("telegraf");
+const { BOT_TOKEN } = require("./config/env");
+const { registerStartHandler } = require("./handlers/startHandler");
+const { registerChannelHandler } = require("./handlers/channelHandler");
+const { registerDraftHandler } = require("./handlers/draftHandler");
+const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
+const { registerSettingsHandler } = require("./handlers/settingsHandler");
+const bot = new Telegraf(BOT_TOKEN);
+bot.catch((err, ctx) => {
+  console.error("Bot error:", err);
+  if (ctx && ctx.reply) ctx.reply("❌ Произошла ошибка. Попробуй еще раз.");
+});
+registerStartHandler(bot);
+registerChannelHandler(bot);
+registerDraftHandler(bot);
+registerAnalyticsHandler(bot);
+registerSettingsHandler(bot);
+bot.launch();
+console.log("Channel OS v0.1 started");
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
