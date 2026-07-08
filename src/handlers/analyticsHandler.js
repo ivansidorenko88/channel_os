@@ -5,11 +5,11 @@ function registerAnalyticsHandler(bot) {
   bot.action("analytics:main", async (ctx) => {
     await ctx.answerCbQuery();
 
-    const stats = getStats(ctx.from);
+    const stats = await getStats(ctx.from);
 
     return ctx.reply(
       [
-        "📊 Аналитика v0.1",
+        "📊 Аналитика v0.2",
         "",
         `📢 Подключено каналов: ${stats.channelCount}`,
         `📝 Опубликовано постов: ${stats.postCount}`,

@@ -1,13 +1,13 @@
 const { mainMenu } = require("../keyboards/mainMenu");
-const { upsertUser } = require("../services/userService");
+const { upsertUser } = require("../repositories/userRepository");
 
 function registerStartHandler(bot) {
   bot.start(async (ctx) => {
-    upsertUser(ctx.from);
+    await upsertUser(ctx.from);
 
     await ctx.reply(
       [
-        "📊 Channel OS v0.1.1",
+        "📊 Channel OS v0.2",
         "",
         "Бот для управления Telegram-каналами.",
         "",
@@ -15,6 +15,7 @@ function registerStartHandler(bot) {
         "• подключение каналов",
         "• создание черновиков",
         "• публикация постов",
+        "• PostgreSQL база данных",
         "• базовая аналитика"
       ].join("\n"),
       mainMenu()

@@ -1,8 +1,8 @@
 const { mainMenu } = require("../keyboards/mainMenu");
 const { channelSelectKeyboard, draftActionsKeyboard } = require("../keyboards/draftKeyboards");
-const { setState, getState, clearState } = require("../storage/state");
+const { setState, getState, clearState } = require("../middleware/state");
 const { getUserChannels } = require("../services/channelService");
-const { createDraft, setDraftChannel, deleteDraft } = require("../services/draftService");
+const { createTextDraft, selectDraftChannel, removeDraft } = require("../services/draftService");
 const { publishDraft } = require("../services/postService");
 
 function registerDraftHandler(bot) {
@@ -17,7 +17,7 @@ function registerDraftHandler(bot) {
         "",
         "Отправь текст поста одним сообщением.",
         "",
-        "В v0.1 поддерживается только текст."
+        "В v0.2 поддерживается только текст. Медиа добавим позже."
       ].join("\n")
     );
   });
@@ -29,10 +29,10 @@ function registerDraftHandler(bot) {
       return next();
     }
 
-    const draft = createDraft(ctx.from, ctx.message.text);
+    const draft = await createTextDraft(ctx.from, ctx.message.text);
     clearState(ctx.from.id);
 
-    const channels = getUserChannels(ctx.from);
+    const channels = await getUserChannels(ctx.from);
 
     if (!channels.length) {
       return ctx.reply(
@@ -58,7 +58,7 @@ function registerDraftHandler(bot) {
     const draftId = Number(ctx.match[1]);
     const channelId = Number(ctx.match[2]);
 
-    const draft = setDraftChannel(ctx.from, draftId, channelId);
+    const draft = await selectDraftChannel(ctx.from, draftId, channelId);
 
     if (!draft) {
       return ctx.reply("❌ Черновик не найден.", mainMenu());
@@ -103,7 +103,7 @@ function registerDraftHandler(bot) {
   bot.action(/^draft:delete:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
 
-    deleteDraft(ctx.from, Number(ctx.match[1]));
+    await removeDraft(ctx.from, Number(ctx.match[1]));
 
     return ctx.reply("🗑 Черновик удален.", mainMenu());
   });

@@ -1,75 +1,41 @@
-const { readDb, writeDb, nextId } = require("../storage/db");
-const { upsertUser } = require("./userService");
+const { upsertUser } = require("../repositories/userRepository");
+const draftRepository = require("../repositories/draftRepository");
 
-function createDraft(from, text) {
-  const user = upsertUser(from);
-  const db = readDb();
+async function createTextDraft(from, text) {
+  const user = await upsertUser(from);
 
-  const draft = {
-    id: nextId(db.drafts),
+  return draftRepository.createDraft({
     userId: user.id,
-    channelId: null,
-    text,
-    createdAt: new Date().toISOString()
-  };
-
-  db.drafts.push(draft);
-  writeDb(db);
-
-  return draft;
+    text
+  });
 }
 
-function setDraftChannel(from, draftId, channelId) {
-  const user = upsertUser(from);
-  const db = readDb();
+async function selectDraftChannel(from, draftId, channelId) {
+  const user = await upsertUser(from);
 
-  const draft = db.drafts.find(
-    (item) =>
-      item.id === Number(draftId) &&
-      item.userId === user.id
-  );
+  await draftRepository.setDraftChannel({
+    userId: user.id,
+    draftId,
+    channelId
+  });
 
-  if (!draft) return null;
-
-  draft.channelId = Number(channelId);
-  writeDb(db);
-
-  return draft;
+  return draftRepository.findDraft({
+    userId: user.id,
+    draftId
+  });
 }
 
-function getDraft(from, draftId) {
-  const user = upsertUser(from);
-  const db = readDb();
+async function removeDraft(from, draftId) {
+  const user = await upsertUser(from);
 
-  return db.drafts.find(
-    (item) =>
-      item.id === Number(draftId) &&
-      item.userId === user.id
-  );
-}
-
-function deleteDraft(from, draftId) {
-  const user = upsertUser(from);
-  const db = readDb();
-
-  const before = db.drafts.length;
-
-  db.drafts = db.drafts.filter(
-    (item) =>
-      !(
-        item.id === Number(draftId) &&
-        item.userId === user.id
-      )
-  );
-
-  writeDb(db);
-
-  return before !== db.drafts.length;
+  return draftRepository.deleteDraft({
+    userId: user.id,
+    draftId
+  });
 }
 
 module.exports = {
-  createDraft,
-  setDraftChannel,
-  getDraft,
-  deleteDraft
+  createTextDraft,
+  selectDraftChannel,
+  removeDraft
 };

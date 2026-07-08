@@ -1,5 +1,5 @@
 const { mainMenu, backToMenu } = require("../keyboards/mainMenu");
-const { setState, getState, clearState } = require("../storage/state");
+const { setState, getState, clearState } = require("../middleware/state");
 const { connectChannelFromForward, getUserChannels } = require("../services/channelService");
 
 function registerChannelHandler(bot) {
@@ -23,7 +23,7 @@ function registerChannelHandler(bot) {
   bot.action("channels:list", async (ctx) => {
     await ctx.answerCbQuery();
 
-    const channels = getUserChannels(ctx.from);
+    const channels = await getUserChannels(ctx.from);
 
     if (!channels.length) {
       return ctx.reply("📢 У тебя пока нет подключенных каналов.", mainMenu());
@@ -46,7 +46,7 @@ function registerChannelHandler(bot) {
       return next();
     }
 
-    const result = connectChannelFromForward(ctx);
+    const result = await connectChannelFromForward(ctx);
 
     if (!result.ok) {
       return ctx.reply(result.message, backToMenu());

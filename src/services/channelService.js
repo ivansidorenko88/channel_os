@@ -1,7 +1,7 @@
-const { readDb, writeDb, nextId } = require("../storage/db");
-const { upsertUser } = require("./userService");
+const { upsertUser } = require("../repositories/userRepository");
+const { upsertChannel, listChannels, findChannel } = require("../repositories/channelRepository");
 
-function connectChannelFromForward(ctx) {
+async function connectChannelFromForward(ctx) {
   const forwardedChat = ctx.message && ctx.message.forward_from_chat;
 
   if (!forwardedChat || forwardedChat.type !== "channel") {
@@ -11,32 +11,14 @@ function connectChannelFromForward(ctx) {
     };
   }
 
-  const user = upsertUser(ctx.from);
-  const db = readDb();
+  const user = await upsertUser(ctx.from);
 
-  let channel = db.channels.find(
-    (item) =>
-      item.ownerId === user.id &&
-      item.telegramId === String(forwardedChat.id)
-  );
-
-  if (!channel) {
-    channel = {
-      id: nextId(db.channels),
-      ownerId: user.id,
-      telegramId: String(forwardedChat.id),
-      title: forwardedChat.title || "Без названия",
-      username: forwardedChat.username || null,
-      createdAt: new Date().toISOString()
-    };
-
-    db.channels.push(channel);
-  } else {
-    channel.title = forwardedChat.title || channel.title;
-    channel.username = forwardedChat.username || null;
-  }
-
-  writeDb(db);
+  const channel = await upsertChannel({
+    ownerId: user.id,
+    telegramId: String(forwardedChat.id),
+    title: forwardedChat.title || "Без названия",
+    username: forwardedChat.username || null
+  });
 
   return {
     ok: true,
@@ -44,22 +26,14 @@ function connectChannelFromForward(ctx) {
   };
 }
 
-function getUserChannels(from) {
-  const user = upsertUser(from);
-  const db = readDb();
-
-  return db.channels.filter((channel) => channel.ownerId === user.id);
+async function getUserChannels(from) {
+  const user = await upsertUser(from);
+  return listChannels(user.id);
 }
 
-function getUserChannel(from, channelId) {
-  const user = upsertUser(from);
-  const db = readDb();
-
-  return db.channels.find(
-    (channel) =>
-      channel.ownerId === user.id &&
-      channel.id === Number(channelId)
-  );
+async function getUserChannel(from, channelId) {
+  const user = await upsertUser(from);
+  return findChannel(user.id, channelId);
 }
 
 module.exports = {

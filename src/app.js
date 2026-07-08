@@ -25,7 +25,7 @@ registerSettingsHandler(bot);
 
 bot.launch();
 
-console.log("Channel OS v0.1.1 BotHost Fixed started");
+console.log("Channel OS v0.2 PostgreSQL started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

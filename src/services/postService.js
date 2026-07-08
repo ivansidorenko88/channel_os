@@ -1,9 +1,15 @@
-const { readDb, writeDb, nextId } = require("../storage/db");
-const { getUserChannel } = require("./channelService");
-const { getDraft, deleteDraft } = require("./draftService");
+const { upsertUser } = require("../repositories/userRepository");
+const { findDraft, deleteDraft, countDrafts } = require("../repositories/draftRepository");
+const { createPublishedPost, countPostsByOwner } = require("../repositories/postRepository");
+const { listChannels } = require("../repositories/channelRepository");
 
 async function publishDraft(ctx, draftId) {
-  const draft = getDraft(ctx.from, draftId);
+  const user = await upsertUser(ctx.from);
+
+  const draft = await findDraft({
+    userId: user.id,
+    draftId
+  });
 
   if (!draft) {
     return {
@@ -12,61 +18,43 @@ async function publishDraft(ctx, draftId) {
     };
   }
 
-  if (!draft.channelId) {
+  if (!draft.channel) {
     return {
       ok: false,
-      message: "❌ Сначала выбери канал для публикации."
+      message: "❌ Сначала выбери канал."
     };
   }
 
-  const channel = getUserChannel(ctx.from, draft.channelId);
+  const sent = await ctx.telegram.sendMessage(draft.channel.telegramId, draft.text);
 
-  if (!channel) {
-    return {
-      ok: false,
-      message: "❌ Канал не найден."
-    };
-  }
-
-  const sent = await ctx.telegram.sendMessage(channel.telegramId, draft.text);
-
-  const db = readDb();
-
-  const post = {
-    id: nextId(db.posts),
-    channelId: channel.id,
+  const post = await createPublishedPost({
+    channelId: draft.channel.id,
     telegramMessageId: sent.message_id,
-    text: draft.text,
-    status: "published",
-    createdAt: new Date().toISOString(),
-    publishedAt: new Date().toISOString()
-  };
+    text: draft.text
+  });
 
-  db.posts.push(post);
-  writeDb(db);
-
-  deleteDraft(ctx.from, draft.id);
+  await deleteDraft({
+    userId: user.id,
+    draftId: draft.id
+  });
 
   return {
     ok: true,
-    channel,
+    channel: draft.channel,
     post
   };
 }
 
-function getStats(from) {
-  const { upsertUser } = require("./userService");
-  const user = upsertUser(from);
-  const db = readDb();
-
-  const channels = db.channels.filter((channel) => channel.ownerId === user.id);
-  const channelIds = channels.map((channel) => channel.id);
-  const posts = db.posts.filter((post) => channelIds.includes(post.channelId));
+async function getStats(from) {
+  const user = await upsertUser(from);
+  const channels = await listChannels(user.id);
+  const postCount = await countPostsByOwner(user.id);
+  const draftCount = await countDrafts(user.id);
 
   return {
     channelCount: channels.length,
-    postCount: posts.length,
-    draftCount: db.drafts.filter((draft) => draft.userId === user.id).length
+    postCount,
+    draftCount
   };
 }
 
