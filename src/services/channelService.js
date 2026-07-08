@@ -25,9 +25,4 @@ async function getUserChannels(from) {
   return listChannels(user.id);
 }
 
-async function getUserChannel(from, channelId) {
-  const user = await upsertUser(from);
-  return findChannel(user.id, channelId);
-}
-
-module.exports = { connectChannelFromForward, getUserChannels, getUserChannel };
+module.exports = { connectChannelFromForward, getUserChannels };

@@ -24,18 +24,16 @@ async function publishDraft(ctx, draftId) {
   });
 
   await deleteDraft({ userId: user.id, draftId: draft.id });
-
   return { ok: true, channel: draft.channel, post };
 }
 
-async function getStats(from) {
+async function getBasicStats(from) {
   const user = await upsertUser(from);
   const channels = await listChannels(user.id);
   const postCount = await countPostsByOwner(user.id);
   const draftCount = await countDrafts(user.id);
   const scheduledCount = await countPendingByOwner(user.id);
-
-  return { channelCount: channels.length, postCount, draftCount, scheduledCount };
+  return { user, channelCount: channels.length, postCount, draftCount, scheduledCount };
 }
 
-module.exports = { publishDraft, getStats };
+module.exports = { publishDraft, getBasicStats };

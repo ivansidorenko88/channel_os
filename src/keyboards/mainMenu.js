@@ -6,7 +6,7 @@ function mainMenu() {
         [{ text: "➕ Добавить канал", callback_data: "channels:add" }],
         [{ text: "📝 Создать пост", callback_data: "draft:create" }],
         [{ text: "📅 Планировщик", callback_data: "schedule:list" }],
-        [{ text: "📊 Аналитика", callback_data: "analytics:main" }],
+        [{ text: "📊 Analytics Pro", callback_data: "analytics:main" }],
         [{ text: "⚙️ Настройки", callback_data: "settings:main" }]
       ]
     }

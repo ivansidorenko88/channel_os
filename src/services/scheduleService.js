@@ -4,15 +4,12 @@ const { createScheduledPost, listPendingByOwner } = require("../repositories/sch
 
 function parseDateTimeRu(input) {
   const match = String(input).trim().match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})$/);
-
   if (!match) return null;
 
   const [, dd, mm, yyyy, hh, min] = match;
   const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 0);
-
   if (Number.isNaN(date.getTime())) return null;
   if (date.getTime() < Date.now()) return null;
-
   return date;
 }
 
@@ -33,7 +30,6 @@ async function scheduleDraft(from, draftId, scheduledAt) {
   });
 
   await deleteDraft({ userId: user.id, draftId: draft.id });
-
   return { ok: true, scheduled, channel: draft.channel };
 }
 

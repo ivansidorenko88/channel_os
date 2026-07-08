@@ -2,7 +2,7 @@ const { findDuePosts, markPublished, markFailed } = require("../repositories/sch
 const { createPublishedPost } = require("../repositories/postRepository");
 const { sendContent } = require("../services/telegramPublishService");
 
-function startScheduler(bot) {
+function startPublisherScheduler(bot) {
   setInterval(async () => {
     try {
       const duePosts = await findDuePosts();
@@ -28,9 +28,9 @@ function startScheduler(bot) {
         }
       }
     } catch (error) {
-      console.error("Scheduler loop error:", error);
+      console.error("Publisher scheduler loop error:", error);
     }
   }, 30000);
 }
 
-module.exports = { startScheduler };
+module.exports = { startPublisherScheduler };

@@ -16,4 +16,12 @@ async function findChannel(ownerId, channelId) {
   return prisma.channel.findFirst({ where: { ownerId, id: Number(channelId) } });
 }
 
-module.exports = { upsertChannel, listChannels, findChannel };
+async function findChannelByTelegramId(telegramId) {
+  return prisma.channel.findFirst({ where: { telegramId: String(telegramId) } });
+}
+
+async function listAllChannels() {
+  return prisma.channel.findMany({ orderBy: { createdAt: "desc" } });
+}
+
+module.exports = { upsertChannel, listChannels, findChannel, findChannelByTelegramId, listAllChannels };

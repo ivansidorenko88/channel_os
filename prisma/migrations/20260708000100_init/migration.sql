@@ -64,6 +64,7 @@ CREATE TABLE "ScheduledPost" (
 CREATE UNIQUE INDEX "User_telegramId_key" ON "User"("telegramId");
 CREATE UNIQUE INDEX "Channel_ownerId_telegramId_key" ON "Channel"("ownerId", "telegramId");
 CREATE INDEX "ScheduledPost_status_scheduledAt_idx" ON "ScheduledPost"("status", "scheduledAt");
+CREATE INDEX "Post_channelId_publishedAt_idx" ON "Post"("channelId", "publishedAt");
 
 ALTER TABLE "Channel" ADD CONSTRAINT "Channel_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Draft" ADD CONSTRAINT "Draft_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

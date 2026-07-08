@@ -6,8 +6,10 @@ const { registerChannelHandler } = require("./handlers/channelHandler");
 const { registerDraftHandler } = require("./handlers/draftHandler");
 const { registerScheduleHandler } = require("./handlers/scheduleHandler");
 const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
+const { registerMemberHandler } = require("./handlers/memberHandler");
 const { registerSettingsHandler } = require("./handlers/settingsHandler");
-const { startScheduler } = require("./scheduler/publisher");
+const { startPublisherScheduler } = require("./scheduler/publisher");
+const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnapshots");
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -21,13 +23,22 @@ registerChannelHandler(bot);
 registerDraftHandler(bot);
 registerScheduleHandler(bot);
 registerAnalyticsHandler(bot);
+registerMemberHandler(bot);
 registerSettingsHandler(bot);
 
-startScheduler(bot);
+startPublisherScheduler(bot);
+startSubscriberSnapshotScheduler(bot);
 
-bot.launch();
+bot.launch({
+  allowedUpdates: [
+    "message",
+    "callback_query",
+    "chat_member",
+    "my_chat_member"
+  ]
+});
 
-console.log("Channel OS v0.3 started");
+console.log("Channel OS v0.4 Analytics Pro started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
