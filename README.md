@@ -1,35 +1,25 @@
-# Channel OS v0.4.1 — Analytics Pro BotHost Fix
+# Channel OS v0.4.2 — BotHost Forced Start Fix
 
 ## Что исправлено
 
-BotHost собирает проект так, что `npm install` выполняется до копирования папки `prisma`.
-
-Из-за этого в v0.4 падала команда:
+BotHost принудительно запускает:
 
 ```bash
-prisma generate
+node src/app.js
 ```
 
-с ошибкой:
+и игнорирует `npm start`.
 
-```text
-Could not find Prisma Schema
-```
-
-В v0.4.1 исправлено:
-
-- убран `postinstall`;
-- `prisma generate` перенесен в `npm start`;
-- Prisma CLI перенесена в `dependencies`, чтобы работала на production-сборке BotHost;
-- в командах явно указан путь `--schema=./prisma/schema.prisma`.
-
-## Команда запуска
+Поэтому в v0.4.2 Prisma запускается прямо в начале `src/app.js`:
 
 ```bash
-npm start
+npx prisma generate --schema=./prisma/schema.prisma
+npx prisma migrate deploy --schema=./prisma/schema.prisma
 ```
 
-## Переменные окружения BotHost
+После этого запускается сам бот.
+
+## Переменные окружения
 
 ```env
 BOT_TOKEN=токен_бота
@@ -40,6 +30,8 @@ DATABASE_URL=строка_подключения_PostgreSQL
 
 ```bash
 git add .
-git commit -m "Channel OS v0.4.1 BotHost Prisma fix"
+git commit -m "Channel OS v0.4.2 BotHost forced start fix"
 git push
 ```
+
+После пуша сделай Redeploy на BotHost.
