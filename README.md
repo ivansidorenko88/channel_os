@@ -1,36 +1,37 @@
-# Channel OS v0.4.2 — BotHost Forced Start Fix
+# Channel OS v0.4.3 — Prisma Config Self Init Fix
 
 ## Что исправлено
 
-BotHost принудительно запускает:
+BotHost запускает проект напрямую через:
 
 ```bash
 node src/app.js
 ```
 
-и игнорирует `npm start`.
+и Prisma Client не успевал сгенерироваться.
 
-Поэтому в v0.4.2 Prisma запускается прямо в начале `src/app.js`:
+В v0.4.3 `src/config/prisma.js` сам выполняет:
 
 ```bash
 npx prisma generate --schema=./prisma/schema.prisma
 npx prisma migrate deploy --schema=./prisma/schema.prisma
 ```
 
-После этого запускается сам бот.
+до создания `PrismaClient`.
 
-## Переменные окружения
+## Что должно появиться в логах
 
-```env
-BOT_TOKEN=токен_бота
-DATABASE_URL=строка_подключения_PostgreSQL
+```text
+Checking Prisma Client...
+Prisma Client ready.
+Channel OS v0.4.3 Analytics Pro started
 ```
 
 ## Как залить
 
 ```bash
 git add .
-git commit -m "Channel OS v0.4.2 BotHost forced start fix"
+git commit -m "Channel OS v0.4.3 Prisma config fix"
 git push
 ```
 

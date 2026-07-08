@@ -1,26 +1,3 @@
-const { execSync } = require("child_process");
-
-function runPrismaStartup() {
-  try {
-    console.log("Running Prisma generate...");
-    execSync("npx prisma generate --schema=./prisma/schema.prisma", {
-      stdio: "inherit"
-    });
-
-    console.log("Running Prisma migrations...");
-    execSync("npx prisma migrate deploy --schema=./prisma/schema.prisma", {
-      stdio: "inherit"
-    });
-
-    console.log("Prisma startup completed");
-  } catch (error) {
-    console.error("Prisma startup failed:", error);
-    process.exit(1);
-  }
-}
-
-runPrismaStartup();
-
 const { Telegraf } = require("telegraf");
 const { BOT_TOKEN } = require("./config/env");
 
@@ -61,7 +38,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.4.2 Analytics Pro started");
+console.log("Channel OS v0.4.3 Analytics Pro started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
