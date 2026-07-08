@@ -7,16 +7,16 @@ function registerStartHandler(bot) {
 
     await ctx.reply(
       [
-        "📊 Channel OS v0.2",
+        "📊 Channel OS v0.3",
         "",
-        "Бот для управления Telegram-каналами.",
+        "Рабочий стол владельца Telegram-канала.",
         "",
-        "Сейчас доступно:",
+        "Доступно:",
         "• подключение каналов",
-        "• создание черновиков",
-        "• публикация постов",
-        "• PostgreSQL база данных",
-        "• базовая аналитика"
+        "• текстовые и медиа-посты",
+        "• черновики",
+        "• публикация сейчас",
+        "• планировщик"
       ].join("\n"),
       mainMenu()
     );
@@ -28,6 +28,4 @@ function registerStartHandler(bot) {
   });
 }
 
-module.exports = {
-  registerStartHandler
-};
+module.exports = { registerStartHandler };

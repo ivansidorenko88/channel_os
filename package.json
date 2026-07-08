@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.2.0",
-  "description": "Telegram Channel OS BotHost PostgreSQL Edition",
+  "version": "0.3.0",
+  "description": "Telegram Channel OS v0.3 with PostgreSQL, drafts, media and scheduler",
   "main": "src/app.js",
   "scripts": {
     "postinstall": "prisma generate",

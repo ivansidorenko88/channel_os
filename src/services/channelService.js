@@ -5,10 +5,7 @@ async function connectChannelFromForward(ctx) {
   const forwardedChat = ctx.message && ctx.message.forward_from_chat;
 
   if (!forwardedChat || forwardedChat.type !== "channel") {
-    return {
-      ok: false,
-      message: "❌ Нужно переслать сообщение именно из Telegram-канала."
-    };
+    return { ok: false, message: "❌ Нужно переслать сообщение именно из Telegram-канала." };
   }
 
   const user = await upsertUser(ctx.from);
@@ -20,10 +17,7 @@ async function connectChannelFromForward(ctx) {
     username: forwardedChat.username || null
   });
 
-  return {
-    ok: true,
-    channel
-  };
+  return { ok: true, channel };
 }
 
 async function getUserChannels(from) {
@@ -36,8 +30,4 @@ async function getUserChannel(from, channelId) {
   return findChannel(user.id, channelId);
 }
 
-module.exports = {
-  connectChannelFromForward,
-  getUserChannels,
-  getUserChannel
-};
+module.exports = { connectChannelFromForward, getUserChannels, getUserChannel };

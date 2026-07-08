@@ -5,6 +5,7 @@ function mainMenu() {
         [{ text: "📢 Мои каналы", callback_data: "channels:list" }],
         [{ text: "➕ Добавить канал", callback_data: "channels:add" }],
         [{ text: "📝 Создать пост", callback_data: "draft:create" }],
+        [{ text: "📅 Планировщик", callback_data: "schedule:list" }],
         [{ text: "📊 Аналитика", callback_data: "analytics:main" }],
         [{ text: "⚙️ Настройки", callback_data: "settings:main" }]
       ]
@@ -22,7 +23,4 @@ function backToMenu() {
   };
 }
 
-module.exports = {
-  mainMenu,
-  backToMenu
-};
+module.exports = { mainMenu, backToMenu };

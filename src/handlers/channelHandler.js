@@ -5,7 +5,6 @@ const { connectChannelFromForward, getUserChannels } = require("../services/chan
 function registerChannelHandler(bot) {
   bot.action("channels:add", async (ctx) => {
     await ctx.answerCbQuery();
-
     setState(ctx.from.id, "WAITING_CHANNEL_FORWARD");
 
     await ctx.reply(
@@ -22,45 +21,29 @@ function registerChannelHandler(bot) {
 
   bot.action("channels:list", async (ctx) => {
     await ctx.answerCbQuery();
-
     const channels = await getUserChannels(ctx.from);
 
-    if (!channels.length) {
-      return ctx.reply("📢 У тебя пока нет подключенных каналов.", mainMenu());
-    }
+    if (!channels.length) return ctx.reply("📢 У тебя пока нет подключенных каналов.", mainMenu());
 
-    const text = channels
-      .map((channel, index) => {
-        const username = channel.username ? `@${channel.username}` : "без username";
-        return `${index + 1}. ${channel.title}\nID: ${channel.telegramId}\nUsername: ${username}`;
-      })
-      .join("\n\n");
+    const text = channels.map((channel, index) => {
+      const username = channel.username ? `@${channel.username}` : "без username";
+      return `${index + 1}. ${channel.title}\nID: ${channel.telegramId}\nUsername: ${username}`;
+    }).join("\n\n");
 
     return ctx.reply(`📢 Мои каналы:\n\n${text}`, mainMenu());
   });
 
   bot.on("message", async (ctx, next) => {
     const currentState = getState(ctx.from.id);
-
-    if (!currentState || currentState.state !== "WAITING_CHANNEL_FORWARD") {
-      return next();
-    }
+    if (!currentState || currentState.state !== "WAITING_CHANNEL_FORWARD") return next();
 
     const result = await connectChannelFromForward(ctx);
 
-    if (!result.ok) {
-      return ctx.reply(result.message, backToMenu());
-    }
+    if (!result.ok) return ctx.reply(result.message, backToMenu());
 
     clearState(ctx.from.id);
-
-    return ctx.reply(
-      `✅ Канал подключен:\n\n📢 ${result.channel.title}`,
-      mainMenu()
-    );
+    return ctx.reply(`✅ Канал подключен:\n\n📢 ${result.channel.title}`, mainMenu());
   });
 }
 
-module.exports = {
-  registerChannelHandler
-};
+module.exports = { registerChannelHandler };

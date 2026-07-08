@@ -8,16 +8,14 @@ function registerSettingsHandler(bot) {
       [
         "⚙️ Настройки",
         "",
-        "В v0.3 добавим:",
+        "Следующий шаг:",
         "• часовой пояс",
         "• уведомления",
-        "• формат публикаций"
+        "• роли команды"
       ].join("\n"),
       mainMenu()
     );
   });
 }
 
-module.exports = {
-  registerSettingsHandler
-};
+module.exports = { registerSettingsHandler };

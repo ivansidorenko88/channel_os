@@ -12,8 +12,4 @@ function clearState(userId) {
   states.delete(String(userId));
 }
 
-module.exports = {
-  setState,
-  getState,
-  clearState
-};
+module.exports = { setState, getState, clearState };

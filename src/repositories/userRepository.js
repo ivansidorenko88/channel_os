@@ -2,9 +2,7 @@ const prisma = require("../config/prisma");
 
 async function upsertUser(from) {
   return prisma.user.upsert({
-    where: {
-      telegramId: String(from.id)
-    },
+    where: { telegramId: String(from.id) },
     update: {
       username: from.username || null,
       firstName: from.first_name || null,
@@ -19,6 +17,4 @@ async function upsertUser(from) {
   });
 }
 
-module.exports = {
-  upsertUser
-};
+module.exports = { upsertUser };

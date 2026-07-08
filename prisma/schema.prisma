@@ -32,6 +32,7 @@ model Channel {
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   drafts Draft[]
   posts  Post[]
+  scheduledPosts ScheduledPost[]
 
   @@unique([ownerId, telegramId])
 }
@@ -40,7 +41,10 @@ model Draft {
   id        Int      @id @default(autoincrement())
   userId    Int
   channelId Int?
-  text      String
+  type      String   @default("text")
+  text      String?
+  fileId    String?
+  caption   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -52,10 +56,30 @@ model Post {
   id                Int       @id @default(autoincrement())
   channelId         Int
   telegramMessageId Int?
-  text              String
+  type              String    @default("text")
+  text              String?
+  fileId            String?
+  caption           String?
   status            String    @default("published")
   createdAt         DateTime  @default(now())
   publishedAt       DateTime?
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+}
+
+model ScheduledPost {
+  id          Int       @id @default(autoincrement())
+  channelId   Int
+  type        String    @default("text")
+  text        String?
+  fileId      String?
+  caption     String?
+  status      String    @default("pending")
+  scheduledAt DateTime
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
 }

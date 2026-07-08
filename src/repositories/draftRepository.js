@@ -1,57 +1,34 @@
 const prisma = require("../config/prisma");
 
-async function createDraft({ userId, text }) {
-  return prisma.draft.create({
-    data: {
-      userId,
-      text
-    }
-  });
+async function createDraft(data) {
+  return prisma.draft.create({ data });
 }
 
 async function setDraftChannel({ userId, draftId, channelId }) {
-  return prisma.draft.updateMany({
-    where: {
-      id: Number(draftId),
-      userId
-    },
-    data: {
-      channelId: Number(channelId)
-    }
+  await prisma.draft.updateMany({
+    where: { id: Number(draftId), userId },
+    data: { channelId: Number(channelId) }
+  });
+
+  return prisma.draft.findFirst({
+    where: { id: Number(draftId), userId },
+    include: { channel: true }
   });
 }
 
 async function findDraft({ userId, draftId }) {
   return prisma.draft.findFirst({
-    where: {
-      id: Number(draftId),
-      userId
-    },
-    include: {
-      channel: true
-    }
+    where: { id: Number(draftId), userId },
+    include: { channel: true }
   });
 }
 
 async function deleteDraft({ userId, draftId }) {
-  return prisma.draft.deleteMany({
-    where: {
-      id: Number(draftId),
-      userId
-    }
-  });
+  return prisma.draft.deleteMany({ where: { id: Number(draftId), userId } });
 }
 
 async function countDrafts(userId) {
-  return prisma.draft.count({
-    where: { userId }
-  });
+  return prisma.draft.count({ where: { userId } });
 }
 
-module.exports = {
-  createDraft,
-  setDraftChannel,
-  findDraft,
-  deleteDraft,
-  countDrafts
-};
+module.exports = { createDraft, setDraftChannel, findDraft, deleteDraft, countDrafts };

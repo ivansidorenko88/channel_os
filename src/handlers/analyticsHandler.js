@@ -9,19 +9,16 @@ function registerAnalyticsHandler(bot) {
 
     return ctx.reply(
       [
-        "📊 Аналитика v0.2",
+        "📊 Аналитика v0.3",
         "",
         `📢 Подключено каналов: ${stats.channelCount}`,
         `📝 Опубликовано постов: ${stats.postCount}`,
         `📄 Черновиков: ${stats.draftCount}`,
-        "",
-        "В следующих версиях добавим просмотры и расписание публикаций."
+        `📅 Запланировано: ${stats.scheduledCount}`
       ].join("\n"),
       mainMenu()
     );
   });
 }
 
-module.exports = {
-  registerAnalyticsHandler
-};
+module.exports = { registerAnalyticsHandler };
