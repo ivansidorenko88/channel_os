@@ -1,32 +1,16 @@
 {
-  "name": "channel-os",
-  "version": "0.1.0",
-  "description": "Telegram Channel OS MVP bot without AI assistant",
+  "name": "channel-os-bothost",
+  "version": "0.1.1",
+  "description": "Channel OS v0.1 BotHost fixed edition without Prisma",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:studio": "prisma studio"
+    "start": "node src/app.js"
   },
-  "keywords": ["telegram", "bot", "channel", "cms"],
-  "license": "MIT",
   "dependencies": {
-    "@prisma/client": "^6.0.0",
     "dotenv": "^16.4.7",
     "telegraf": "^4.16.3"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.9",
-    "prisma": "^6.0.0"
+  "engines": {
+    "node": ">=20"
   }
-}
-"scripts": {
-  "postinstall": "prisma generate",
-  "start": "prisma generate && node src/app.js",
-  "dev": "nodemon src/app.js",
-  "prisma:generate": "prisma generate",
-  "prisma:migrate": "prisma migrate dev --name init",
-  "prisma:studio": "prisma studio"
 }
