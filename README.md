@@ -1,25 +1,45 @@
-# Channel OS v0.4 — Analytics Pro
+# Channel OS v0.4.1 — Analytics Pro BotHost Fix
 
-## Новое в v0.4
+## Что исправлено
 
-- Расширенная аналитика
-- Аналитика за 7 и 30 дней
-- Аналитика по каждому каналу
-- Топ каналов по публикациям
-- История подписок и отписок
-- События `chat_member`
-- Снимки количества подписчиков через `getChatMemberCount`
-- Базовый отчет по росту аудитории
+BotHost собирает проект так, что `npm install` выполняется до копирования папки `prisma`.
 
-## Важно про подписчиков/отписки
+Из-за этого в v0.4 падала команда:
 
-Telegram Bot API не предоставляет обычному боту полный список всех подписчиков канала по запросу.
+```bash
+prisma generate
+```
 
-Что работает:
+с ошибкой:
 
-- если Telegram присылает событие `chat_member`, бот сохранит, кто подписался или отписался;
-- бот может сохранять общую численность подписчиков через `getChatMemberCount`;
-- для работы событий бот должен быть админом канала.
+```text
+Could not find Prisma Schema
+```
 
+В v0.4.1 исправлено:
 
+- убран `postinstall`;
+- `prisma generate` перенесен в `npm start`;
+- Prisma CLI перенесена в `dependencies`, чтобы работала на production-сборке BotHost;
+- в командах явно указан путь `--schema=./prisma/schema.prisma`.
 
+## Команда запуска
+
+```bash
+npm start
+```
+
+## Переменные окружения BotHost
+
+```env
+BOT_TOKEN=токен_бота
+DATABASE_URL=строка_подключения_PostgreSQL
+```
+
+## Как залить
+
+```bash
+git add .
+git commit -m "Channel OS v0.4.1 BotHost Prisma fix"
+git push
+```
