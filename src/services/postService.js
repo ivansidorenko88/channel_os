@@ -1,18 +1,76 @@
-const { upsertFromTelegramUser } = require("../repositories/userRepository");
-const { createDraft, findDraftForUser, deleteDraft } = require("../repositories/draftRepository");
-const { createPublishedPost } = require("../repositories/postRepository");
-async function saveTextDraft(ctx) {
-  const user = await upsertFromTelegramUser(ctx.from);
-  return createDraft({ userId: user.id, text: ctx.message.text });
-}
+const { readDb, writeDb, nextId } = require("../storage/db");
+const { getUserChannel } = require("./channelService");
+const { getDraft, deleteDraft } = require("./draftService");
+
 async function publishDraft(ctx, draftId) {
-  const user = await upsertFromTelegramUser(ctx.from);
-  const draft = await findDraftForUser(draftId, user.id);
-  if (!draft) return { ok: false, message: "❌ Черновик не найден." };
-  if (!draft.channel) return { ok: false, message: "❌ Сначала выбери канал для публикации." };
-  const sent = await ctx.telegram.sendMessage(draft.channel.telegramId, draft.text);
-  await createPublishedPost({ channelId: draft.channel.id, text: draft.text, telegramMessageId: sent.message_id });
-  await deleteDraft(draft.id, user.id);
-  return { ok: true, channel: draft.channel, messageId: sent.message_id };
+  const draft = getDraft(ctx.from, draftId);
+
+  if (!draft) {
+    return {
+      ok: false,
+      message: "❌ Черновик не найден."
+    };
+  }
+
+  if (!draft.channelId) {
+    return {
+      ok: false,
+      message: "❌ Сначала выбери канал для публикации."
+    };
+  }
+
+  const channel = getUserChannel(ctx.from, draft.channelId);
+
+  if (!channel) {
+    return {
+      ok: false,
+      message: "❌ Канал не найден."
+    };
+  }
+
+  const sent = await ctx.telegram.sendMessage(channel.telegramId, draft.text);
+
+  const db = readDb();
+
+  const post = {
+    id: nextId(db.posts),
+    channelId: channel.id,
+    telegramMessageId: sent.message_id,
+    text: draft.text,
+    status: "published",
+    createdAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString()
+  };
+
+  db.posts.push(post);
+  writeDb(db);
+
+  deleteDraft(ctx.from, draft.id);
+
+  return {
+    ok: true,
+    channel,
+    post
+  };
 }
-module.exports = { saveTextDraft, publishDraft };
+
+function getStats(from) {
+  const { upsertUser } = require("./userService");
+  const user = upsertUser(from);
+  const db = readDb();
+
+  const channels = db.channels.filter((channel) => channel.ownerId === user.id);
+  const channelIds = channels.map((channel) => channel.id);
+  const posts = db.posts.filter((post) => channelIds.includes(post.channelId));
+
+  return {
+    channelCount: channels.length,
+    postCount: posts.length,
+    draftCount: db.drafts.filter((draft) => draft.userId === user.id).length
+  };
+}
+
+module.exports = {
+  publishDraft,
+  getStats
+};

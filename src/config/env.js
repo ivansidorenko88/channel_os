@@ -1,12 +1,11 @@
 require("dotenv").config();
 
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required env variable: ${name}`);
-  return value;
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+if (!BOT_TOKEN) {
+  throw new Error("BOT_TOKEN is missing. Add it to .env or BotHost environment variables.");
 }
 
 module.exports = {
-  BOT_TOKEN: requireEnv("BOT_TOKEN"),
-  ADMIN_IDS: (process.env.ADMIN_IDS || "").split(",").map((id) => id.trim()).filter(Boolean),
+  BOT_TOKEN
 };
