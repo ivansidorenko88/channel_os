@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.4.3",
-  "description": "Telegram Channel OS v0.4.3 Prisma config self-init fix",
+  "version": "0.2.0",
+  "description": "Channel OS v0.2.0 Analytics Core",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

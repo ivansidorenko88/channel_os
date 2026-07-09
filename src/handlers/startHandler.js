@@ -7,15 +7,15 @@ function registerStartHandler(bot) {
 
     await ctx.reply(
       [
-        "📊 Channel OS v0.4",
+        "📊 Channel OS v0.2.0",
         "",
-        "Analytics Pro включен.",
+        "Analytics Core включен.",
         "",
         "Доступно:",
         "• публикации и планировщик",
         "• медиа-посты",
-        "• расширенная аналитика",
-        "• подписки/отписки, если Telegram отдаёт события"
+        "• автоматический сбор статистики",
+        "• подготовка базы для Analytics Pro"
       ].join("\n"),
       mainMenu()
     );

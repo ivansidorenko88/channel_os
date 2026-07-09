@@ -10,6 +10,7 @@ const { registerMemberHandler } = require("./handlers/memberHandler");
 const { registerSettingsHandler } = require("./handlers/settingsHandler");
 const { startPublisherScheduler } = require("./scheduler/publisher");
 const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnapshots");
+const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreScheduler");
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -28,6 +29,7 @@ registerSettingsHandler(bot);
 
 startPublisherScheduler(bot);
 startSubscriberSnapshotScheduler(bot);
+startAnalyticsCoreScheduler(bot);
 
 bot.launch({
   allowedUpdates: [
@@ -38,7 +40,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.4.3 Analytics Pro started");
+console.log("Channel OS v0.2.0 Analytics Core started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

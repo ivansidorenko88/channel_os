@@ -35,6 +35,7 @@ model Channel {
   scheduledPosts ScheduledPost[]
   subscriberEvents SubscriberEvent[]
   subscriberSnapshots SubscriberSnapshot[]
+  analyticsSnapshots  AnalyticsSnapshot[]
 
   @@unique([ownerId, telegramId])
 }
@@ -110,6 +111,21 @@ model SubscriberSnapshot {
   id              Int      @id @default(autoincrement())
   channelId       Int
   subscriberCount Int
+  createdAt       DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, createdAt])
+}
+
+model AnalyticsSnapshot {
+  id              Int      @id @default(autoincrement())
+  channelId       Int
+  subscriberCount Int
+  postCount       Int      @default(0)
+  scheduledCount  Int      @default(0)
+  draftCount      Int      @default(0)
+  source          String   @default("scheduler")
   createdAt       DateTime @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)

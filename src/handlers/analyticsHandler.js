@@ -5,7 +5,42 @@ const analytics = require("../services/analyticsService");
 function registerAnalyticsHandler(bot) {
   bot.action("analytics:main", async (ctx) => {
     await ctx.answerCbQuery();
-    return ctx.reply("📊 Analytics Pro\n\nВыбери раздел:", analyticsMenu());
+    return ctx.reply("📊 Analytics Pro v0.2.0\n\nСбор статистики уже работает в фоне. Выбери раздел:", analyticsMenu());
+  });
+
+
+
+  bot.action("analytics:core", async (ctx) => {
+    await ctx.answerCbQuery();
+
+    const { upsertUser } = require("../repositories/userRepository");
+    const { getOwnerAnalytics } = require("../services/analyticsCoreService");
+
+    const user = await upsertUser(ctx.from);
+    const data = await getOwnerAnalytics(user.id);
+
+    const topRows = data.rows.slice(0, 5).map((row, index) => {
+      const subscribers = row.latest ? row.latest.subscriberCount : "нет снимка";
+      const day = row.deltaDay >= 0 ? `+${row.deltaDay}` : String(row.deltaDay);
+      const week = row.deltaWeek >= 0 ? `+${row.deltaWeek}` : String(row.deltaWeek);
+      return `${index + 1}. ${row.channel.title}\n👥 ${subscribers} | 24ч: ${day} | 7д: ${week}\n${row.sparkline7d}`;
+    }).join("\n\n") || "Пока нет данных. Первый снимок появится после запуска scheduler.";
+
+    return ctx.reply(
+      [
+        "📈 Analytics Core",
+        "",
+        `📢 Каналов: ${data.channelCount}`,
+        `👥 Подписчиков всего: ${data.totalSubscribers}`,
+        `📈 Рост за 24ч: ${data.totalDeltaDay >= 0 ? "+" : ""}${data.totalDeltaDay}`,
+        `📅 Рост за 7д: ${data.totalDeltaWeek >= 0 ? "+" : ""}${data.totalDeltaWeek}`,
+        `🗓 Рост за 30д: ${data.totalDeltaMonth >= 0 ? "+" : ""}${data.totalDeltaMonth}`,
+        "",
+        "📢 Каналы:",
+        topRows
+      ].join("\n"),
+      analyticsMenu()
+    );
   });
 
   bot.action("analytics:overview", async (ctx) => {
