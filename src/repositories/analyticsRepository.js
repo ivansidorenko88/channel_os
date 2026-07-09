@@ -31,6 +31,16 @@ async function listAnalyticsSnapshotsSince(channelId, since) {
   });
 }
 
+async function listRecentAnalyticsSnapshots(channelId, take = 8) {
+  const rows = await prisma.analyticsSnapshot.findMany({
+    where: { channelId },
+    orderBy: { createdAt: "desc" },
+    take
+  });
+
+  return rows.reverse();
+}
+
 async function countDraftsForChannel(channelId) {
   return prisma.draft.count({ where: { channelId } });
 }
@@ -53,6 +63,7 @@ module.exports = {
   latestAnalyticsSnapshot,
   firstAnalyticsSnapshotSince,
   listAnalyticsSnapshotsSince,
+  listRecentAnalyticsSnapshots,
   countDraftsForChannel,
   countPostsForChannel,
   countScheduledForChannel

@@ -40,7 +40,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.0 Analytics Core started");
+console.log("Channel OS v0.2.1 Analytics Pro UI started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

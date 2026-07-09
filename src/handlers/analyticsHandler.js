@@ -1,40 +1,236 @@
 const { mainMenu } = require("../keyboards/mainMenu");
-const { analyticsMenu } = require("../keyboards/analyticsKeyboards");
+const { analyticsMenu, analyticsChannelSelectKeyboard, channelAnalyticsKeyboard } = require("../keyboards/analyticsKeyboards");
 const analytics = require("../services/analyticsService");
+const { upsertUser } = require("../repositories/userRepository");
+const { getUserChannels } = require("../services/channelService");
+const {
+  getOwnerAnalytics,
+  getChannelAnalyticsForOwner,
+  formatSigned,
+  formatDateTime
+} = require("../services/analyticsCoreService");
+
+function safeNumber(value) {
+  if (value === null || value === undefined) return "нет данных";
+  return Number(value).toLocaleString("ru-RU");
+}
+
+function buildChannelCard(row) {
+  const latest = row.latest;
+  const subscribers = latest ? safeNumber(latest.subscriberCount) : "нет снимка";
+  const postCount = latest ? latest.postCount : 0;
+  const scheduledCount = latest ? latest.scheduledCount : 0;
+  const draftCount = latest ? latest.draftCount : 0;
+
+  return [
+    "📊 Analytics Pro",
+    "",
+    `📢 ${row.channel.title}`,
+    "━━━━━━━━━━━━━━",
+    "",
+    `👥 Подписчиков: ${subscribers}`,
+    `📈 24 часа: ${formatSigned(row.deltaDay)}`,
+    `📅 7 дней: ${formatSigned(row.deltaWeek)}`,
+    `🗓 30 дней: ${formatSigned(row.deltaMonth)}`,
+    "",
+    `📝 Постов: ${postCount}`,
+    `⏰ Запланировано: ${scheduledCount}`,
+    `📄 Черновиков: ${draftCount}`,
+    "",
+    `🟢 Health: ${row.healthScore}/100`,
+    `${row.healthLabel}`,
+    "",
+    `📈 График 7д: ${row.sparkline7d}`,
+    "",
+    `🕒 Обновлено: ${latest ? formatDateTime(latest.createdAt) : "ожидаем первый снимок"}`
+  ].join("\n");
+}
+
+function buildGrowthText(row) {
+  return [
+    "📈 Рост канала",
+    "",
+    `📢 ${row.channel.title}`,
+    "━━━━━━━━━━━━━━",
+    "",
+    `Сегодня / 24ч: ${formatSigned(row.deltaDay)}`,
+    `Неделя: ${formatSigned(row.deltaWeek)}`,
+    `Месяц: ${formatSigned(row.deltaMonth)}`,
+    "",
+    `Мини-график 24ч: ${row.sparkline24h}`,
+    `Мини-график 7д: ${row.sparkline7d}`,
+    "",
+    "Данные считаются по снимкам количества подписчиков."
+  ].join("\n");
+}
+
+function buildHistoryText(row) {
+  const history = row.recentSnapshots.length
+    ? row.recentSnapshots.map((snapshot) => {
+        return `${formatDateTime(snapshot.createdAt)} — ${safeNumber(snapshot.subscriberCount)}`;
+      }).join("\n")
+    : "Пока нет истории. Дождись первого снимка scheduler.";
+
+  return [
+    "📅 История снимков",
+    "",
+    `📢 ${row.channel.title}`,
+    "━━━━━━━━━━━━━━",
+    history
+  ].join("\n");
+}
+
+function buildReportText(row) {
+  const latest = row.latest;
+  const best = row.bestInterval24h;
+
+  const bestText = best
+    ? `${formatDateTime(best.from)} → ${formatDateTime(best.to)}: ${formatSigned(best.delta)}`
+    : "недостаточно данных";
+
+  return [
+    "📄 Отчёт за 24 часа",
+    "",
+    `📢 ${row.channel.title}`,
+    "━━━━━━━━━━━━━━",
+    "",
+    `👥 Сейчас: ${latest ? safeNumber(latest.subscriberCount) : "нет снимка"}`,
+    `📈 Рост: ${formatSigned(row.deltaDay)}`,
+    `📝 Постов всего: ${latest ? latest.postCount : 0}`,
+    `⏰ Запланировано: ${latest ? latest.scheduledCount : 0}`,
+    `📄 Черновиков: ${latest ? latest.draftCount : 0}`,
+    "",
+    `🔥 Лучший интервал: ${bestText}`,
+    "",
+    "Следующий шаг: в v0.2.2 добавим ежедневные отчёты и экспорт."
+  ].join("\n");
+}
+
+function buildHealthText(row) {
+  const tips = [];
+
+  if (!row.latest) tips.push("🔴 Нет снимков аналитики — дождись работы scheduler.");
+  if (row.deltaDay > 0) tips.push("🟢 За 24 часа есть рост аудитории.");
+  if (row.deltaDay === 0) tips.push("🟡 За 24 часа аудитория без изменений.");
+  if (row.deltaDay < 0) tips.push("🔴 За 24 часа есть падение аудитории.");
+  if (row.latest && row.latest.scheduledCount > 0) tips.push("🟢 Есть запланированный контент.");
+  if (row.latest && row.latest.scheduledCount === 0) tips.push("🟡 Нет запланированных публикаций.");
+  if (row.latest && row.latest.postCount > 0) tips.push("🟢 Канал уже публиковался через Channel OS.");
+
+  return [
+    "🟢 Channel Health",
+    "",
+    `📢 ${row.channel.title}`,
+    "━━━━━━━━━━━━━━",
+    "",
+    `${row.healthScore}/100`,
+    row.healthLabel,
+    "",
+    ...tips,
+    "",
+    "Health Score — внутренний показатель Channel OS. Он учитывает наличие данных, рост аудитории, публикации и запланированный контент."
+  ].join("\n");
+}
+
+async function getRowForCallback(ctx, channelId) {
+  const user = await upsertUser(ctx.from);
+  return getChannelAnalyticsForOwner(user.id, channelId);
+}
 
 function registerAnalyticsHandler(bot) {
   bot.action("analytics:main", async (ctx) => {
     await ctx.answerCbQuery();
-    return ctx.reply("📊 Analytics Pro v0.2.0\n\nСбор статистики уже работает в фоне. Выбери раздел:", analyticsMenu());
+    return ctx.reply(
+      [
+        "📊 Analytics Pro v0.2.1",
+        "",
+        "Аналитика стала удобнее: теперь можно открыть карточку канала, посмотреть рост, историю снимков, отчёт за 24 часа и Health Score.",
+        "",
+        "Выбери раздел:"
+      ].join("\n"),
+      analyticsMenu()
+    );
   });
 
+  bot.action("analytics:select_channel", async (ctx) => {
+    await ctx.answerCbQuery();
+    const channels = await getUserChannels(ctx.from);
 
+    if (!channels.length) {
+      return ctx.reply("📢 У тебя пока нет подключенных каналов.", mainMenu());
+    }
+
+    return ctx.reply("📊 Analytics Pro\n\nВыбери канал:", analyticsChannelSelectKeyboard(channels));
+  });
+
+  bot.action(/^analytics:channel:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
+
+    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
+
+    return ctx.reply(buildChannelCard(row), channelAnalyticsKeyboard(row.channel.id));
+  });
+
+  bot.action(/^analytics:growth:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
+
+    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
+
+    return ctx.reply(buildGrowthText(row), channelAnalyticsKeyboard(row.channel.id));
+  });
+
+  bot.action(/^analytics:history:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
+
+    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
+
+    return ctx.reply(buildHistoryText(row), channelAnalyticsKeyboard(row.channel.id));
+  });
+
+  bot.action(/^analytics:report:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
+
+    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
+
+    return ctx.reply(buildReportText(row), channelAnalyticsKeyboard(row.channel.id));
+  });
+
+  bot.action(/^analytics:health:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
+
+    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
+
+    return ctx.reply(buildHealthText(row), channelAnalyticsKeyboard(row.channel.id));
+  });
 
   bot.action("analytics:core", async (ctx) => {
     await ctx.answerCbQuery();
-
-    const { upsertUser } = require("../repositories/userRepository");
-    const { getOwnerAnalytics } = require("../services/analyticsCoreService");
 
     const user = await upsertUser(ctx.from);
     const data = await getOwnerAnalytics(user.id);
 
     const topRows = data.rows.slice(0, 5).map((row, index) => {
-      const subscribers = row.latest ? row.latest.subscriberCount : "нет снимка";
-      const day = row.deltaDay >= 0 ? `+${row.deltaDay}` : String(row.deltaDay);
-      const week = row.deltaWeek >= 0 ? `+${row.deltaWeek}` : String(row.deltaWeek);
-      return `${index + 1}. ${row.channel.title}\n👥 ${subscribers} | 24ч: ${day} | 7д: ${week}\n${row.sparkline7d}`;
+      const subscribers = row.latest ? safeNumber(row.latest.subscriberCount) : "нет снимка";
+      const day = formatSigned(row.deltaDay);
+      const week = formatSigned(row.deltaWeek);
+      return `${index + 1}. ${row.channel.title}\n👥 ${subscribers} | 24ч: ${day} | 7д: ${week}\n🟢 Health: ${row.healthScore}/100\n${row.sparkline7d}`;
     }).join("\n\n") || "Пока нет данных. Первый снимок появится после запуска scheduler.";
 
     return ctx.reply(
       [
-        "📈 Analytics Core",
+        "📈 Общий обзор Analytics Pro",
         "",
         `📢 Каналов: ${data.channelCount}`,
-        `👥 Подписчиков всего: ${data.totalSubscribers}`,
-        `📈 Рост за 24ч: ${data.totalDeltaDay >= 0 ? "+" : ""}${data.totalDeltaDay}`,
-        `📅 Рост за 7д: ${data.totalDeltaWeek >= 0 ? "+" : ""}${data.totalDeltaWeek}`,
-        `🗓 Рост за 30д: ${data.totalDeltaMonth >= 0 ? "+" : ""}${data.totalDeltaMonth}`,
+        `👥 Подписчиков всего: ${safeNumber(data.totalSubscribers)}`,
+        `📈 Рост за 24ч: ${formatSigned(data.totalDeltaDay)}`,
+        `📅 Рост за 7д: ${formatSigned(data.totalDeltaWeek)}`,
+        `🗓 Рост за 30д: ${formatSigned(data.totalDeltaMonth)}`,
+        `🟢 Средний Health: ${data.averageHealth}/100`,
         "",
         "📢 Каналы:",
         topRows
@@ -86,16 +282,11 @@ function registerAnalyticsHandler(bot) {
 
   bot.action("analytics:channels", async (ctx) => {
     await ctx.answerCbQuery();
-    const rows = await analytics.channelsReport(ctx.from);
+    const channels = await getUserChannels(ctx.from);
 
-    if (!rows.length) return ctx.reply("📢 Каналы пока не подключены.", mainMenu());
+    if (!channels.length) return ctx.reply("📢 Каналы пока не подключены.", mainMenu());
 
-    const text = rows.map((row, index) => {
-      const subs = row.subscriberCount === null ? "нет снимка" : row.subscriberCount;
-      return `${index + 1}. ${row.title}\n👥 Подписчиков: ${subs}\n📝 Постов всего: ${row.postsTotal}\n📅 За 7 дней: ${row.posts7}\n🕒 Последний пост: ${analytics.formatDate(row.lastPostAt)}`;
-    }).join("\n\n");
-
-    return ctx.reply(`📢 Аналитика по каналам:\n\n${text}`, analyticsMenu());
+    return ctx.reply("📢 Выбери канал для подробной аналитики:", analyticsChannelSelectKeyboard(channels));
   });
 
   bot.action("analytics:subscribers", async (ctx) => {
@@ -120,7 +311,9 @@ function registerAnalyticsHandler(bot) {
         `📊 Баланс: ${data.net30 >= 0 ? "+" : ""}${data.net30}`,
         "",
         "Последние события:",
-        recent
+        recent,
+        "",
+        "Важно: Telegram не всегда отдаёт личности подписчиков/отписавшихся. Надёжная аналитика строится на снимках общего числа подписчиков."
       ].join("\n"),
       analyticsMenu()
     );

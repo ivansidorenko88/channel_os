@@ -1,4 +1,4 @@
-const { listAllChannels } = require("../repositories/channelRepository");
+const { listAllChannels, listChannels, findChannel } = require("../repositories/channelRepository");
 const analyticsRepository = require("../repositories/analyticsRepository");
 
 function daysAgo(days) {
@@ -10,6 +10,20 @@ function daysAgo(days) {
 function getDelta(current, previous) {
   if (!current || !previous) return 0;
   return current.subscriberCount - previous.subscriberCount;
+}
+
+function formatSigned(value) {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+function formatDateTime(date) {
+  if (!date) return "нет данных";
+  return new Date(date).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function buildSparkline(values) {
@@ -28,6 +42,48 @@ function buildSparkline(values) {
       return blocks[index];
     })
     .join("");
+}
+
+function calculateBestInterval(snapshots) {
+  if (snapshots.length < 2) return null;
+
+  let best = null;
+
+  for (let i = 1; i < snapshots.length; i += 1) {
+    const previous = snapshots[i - 1];
+    const current = snapshots[i];
+    const delta = current.subscriberCount - previous.subscriberCount;
+
+    if (!best || delta > best.delta) {
+      best = {
+        from: previous.createdAt,
+        to: current.createdAt,
+        delta
+      };
+    }
+  }
+
+  return best;
+}
+
+function calculateHealthScore(row) {
+  let score = 50;
+
+  if (row.latest) score += 10;
+  if (row.deltaDay > 0) score += 15;
+  if (row.deltaWeek > 0) score += 15;
+  if (row.latest && row.latest.postCount > 0) score += 10;
+  if (row.latest && row.latest.scheduledCount > 0) score += 5;
+  if (row.deltaDay < 0) score -= 10;
+  if (row.deltaWeek < 0) score -= 10;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function getHealthLabel(score) {
+  if (score >= 85) return "🟢 Отличное состояние";
+  if (score >= 65) return "🟡 Нормальное состояние";
+  return "🔴 Требует внимания";
 }
 
 async function collectChannelSnapshot(telegram, channel) {
@@ -50,11 +106,7 @@ async function collectChannelSnapshot(telegram, channel) {
 
 async function collectAllSnapshots(telegram) {
   const channels = await listAllChannels();
-  const result = {
-    total: channels.length,
-    success: 0,
-    failed: 0
-  };
+  const result = { total: channels.length, success: 0, failed: 0 };
 
   for (const channel of channels) {
     try {
@@ -76,19 +128,35 @@ async function getChannelAnalytics(channel) {
   const week = await analyticsRepository.firstAnalyticsSnapshotSince(channel.id, daysAgo(7));
   const month = await analyticsRepository.firstAnalyticsSnapshotSince(channel.id, daysAgo(30));
   const weekSnapshots = await analyticsRepository.listAnalyticsSnapshotsSince(channel.id, daysAgo(7));
+  const daySnapshots = await analyticsRepository.listAnalyticsSnapshotsSince(channel.id, daysAgo(1));
+  const recentSnapshots = await analyticsRepository.listRecentAnalyticsSnapshots(channel.id, 8);
 
-  return {
+  const row = {
     channel,
     latest,
     deltaDay: getDelta(latest, day),
     deltaWeek: getDelta(latest, week),
     deltaMonth: getDelta(latest, month),
-    sparkline7d: buildSparkline(weekSnapshots.map((snapshot) => snapshot.subscriberCount))
+    sparkline7d: buildSparkline(weekSnapshots.map((snapshot) => snapshot.subscriberCount)),
+    sparkline24h: buildSparkline(daySnapshots.map((snapshot) => snapshot.subscriberCount)),
+    daySnapshots,
+    recentSnapshots,
+    bestInterval24h: calculateBestInterval(daySnapshots)
   };
+
+  row.healthScore = calculateHealthScore(row);
+  row.healthLabel = getHealthLabel(row.healthScore);
+
+  return row;
+}
+
+async function getChannelAnalyticsForOwner(ownerId, channelId) {
+  const channel = await findChannel(ownerId, channelId);
+  if (!channel) return null;
+  return getChannelAnalytics(channel);
 }
 
 async function getOwnerAnalytics(ownerId) {
-  const { listChannels } = require("../repositories/channelRepository");
   const channels = await listChannels(ownerId);
   const rows = [];
 
@@ -100,6 +168,7 @@ async function getOwnerAnalytics(ownerId) {
   const totalDeltaDay = rows.reduce((sum, row) => sum + row.deltaDay, 0);
   const totalDeltaWeek = rows.reduce((sum, row) => sum + row.deltaWeek, 0);
   const totalDeltaMonth = rows.reduce((sum, row) => sum + row.deltaMonth, 0);
+  const averageHealth = rows.length ? Math.round(rows.reduce((sum, row) => sum + row.healthScore, 0) / rows.length) : 0;
 
   return {
     channelCount: channels.length,
@@ -107,6 +176,7 @@ async function getOwnerAnalytics(ownerId) {
     totalDeltaDay,
     totalDeltaWeek,
     totalDeltaMonth,
+    averageHealth,
     rows
   };
 }
@@ -116,5 +186,8 @@ module.exports = {
   collectChannelSnapshot,
   getOwnerAnalytics,
   getChannelAnalytics,
-  buildSparkline
+  getChannelAnalyticsForOwner,
+  buildSparkline,
+  formatSigned,
+  formatDateTime
 };
