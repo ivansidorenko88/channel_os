@@ -13,7 +13,8 @@ function getDelta(current, previous) {
 }
 
 function formatSigned(value) {
-  return value >= 0 ? `+${value}` : String(value);
+  const number = Number(value) || 0;
+  return number >= 0 ? `+${number}` : String(number);
 }
 
 function formatDateTime(date) {
@@ -27,16 +28,18 @@ function formatDateTime(date) {
 }
 
 function buildSparkline(values) {
-  if (!values.length) return "нет данных";
-  if (values.length === 1) return "▁";
+  const clean = values.filter((value) => Number.isFinite(Number(value))).map(Number);
+
+  if (!clean.length) return "нет данных";
+  if (clean.length === 1) return "▃";
 
   const blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
 
-  if (min === max) return values.map(() => "▃").join("");
+  if (min === max) return clean.map(() => "▃").join("");
 
-  return values
+  return clean
     .map((value) => {
       const index = Math.round(((value - min) / (max - min)) * (blocks.length - 1));
       return blocks[index];
@@ -45,7 +48,7 @@ function buildSparkline(values) {
 }
 
 function calculateBestInterval(snapshots) {
-  if (snapshots.length < 2) return null;
+  if (!snapshots || snapshots.length < 2) return null;
 
   let best = null;
 
@@ -66,54 +69,61 @@ function calculateBestInterval(snapshots) {
   return best;
 }
 
-  let score = 50;
-
-  if (row.latest) score += 10;
-  if (row.deltaDay > 0) score += 15;
-  if (row.deltaWeek > 0) score += 15;
-  if (row.latest && row.latest.postCount > 0) score += 10;
-  if (row.latest && row.latest.scheduledCount > 0) score += 5;
-  if (row.deltaDay < 0) score -= 10;
-  if (row.deltaWeek < 0) score -= 10;
-
-  return Math.max(0, Math.min(100, score));
-}
-
-  if (score >= 85) return "🟢 Отличное состояние";
-  if (score >= 65) return "🟡 Нормальное состояние";
-  return "🔴 Требует внимания";
-}
-
-async function collectChannelSnapshot(telegram, channel) {
+async function collectChannelSnapshot(telegram, channel, source = "scheduler") {
   const subscriberCount = await telegram.getChatMemberCount(channel.telegramId);
   const postCount = await analyticsRepository.countPostsForChannel(channel.id);
   const scheduledCount = await analyticsRepository.countScheduledForChannel(channel.id);
   const draftCount = await analyticsRepository.countDraftsForChannel(channel.id);
 
-  const snapshot = await analyticsRepository.createAnalyticsSnapshot({
+  return analyticsRepository.createAnalyticsSnapshot({
     channelId: channel.id,
     subscriberCount,
     postCount,
     scheduledCount,
     draftCount,
-    source: "scheduler"
+    source
   });
-
-  return snapshot;
 }
 
 async function collectAllSnapshots(telegram) {
   const channels = await listAllChannels();
-  const result = { total: channels.length, success: 0, failed: 0 };
+  const result = { total: channels.length, success: 0, failed: 0, errors: [] };
 
   for (const channel of channels) {
     try {
-      await collectChannelSnapshot(telegram, channel);
+      await collectChannelSnapshot(telegram, channel, "scheduler");
       result.success += 1;
       console.log(`[AnalyticsCore] Snapshot saved for ${channel.title}`);
     } catch (error) {
       result.failed += 1;
+      result.errors.push({
+        channelId: channel.id,
+        title: channel.title,
+        message: error.message
+      });
       console.error(`[AnalyticsCore] Snapshot failed for ${channel.title}:`, error.message);
+    }
+  }
+
+  return result;
+}
+
+async function collectOwnerSnapshots(telegram, ownerId) {
+  const channels = await listChannels(ownerId);
+  const result = { total: channels.length, success: 0, failed: 0, errors: [] };
+
+  for (const channel of channels) {
+    try {
+      await collectChannelSnapshot(telegram, channel, "manual");
+      result.success += 1;
+    } catch (error) {
+      result.failed += 1;
+      result.errors.push({
+        channelId: channel.id,
+        title: channel.title,
+        message: error.message
+      });
+      console.error(`[AnalyticsCore] Manual snapshot failed for ${channel.title}:`, error.message);
     }
   }
 
@@ -129,7 +139,7 @@ async function getChannelAnalytics(channel) {
   const daySnapshots = await analyticsRepository.listAnalyticsSnapshotsSince(channel.id, daysAgo(1));
   const recentSnapshots = await analyticsRepository.listRecentAnalyticsSnapshots(channel.id, 8);
 
-  const row = {
+  return {
     channel,
     latest,
     deltaDay: getDelta(latest, day),
@@ -141,8 +151,6 @@ async function getChannelAnalytics(channel) {
     recentSnapshots,
     bestInterval24h: calculateBestInterval(daySnapshots)
   };
-
-  return row;
 }
 
 async function getChannelAnalyticsForOwner(ownerId, channelId) {
@@ -163,6 +171,7 @@ async function getOwnerAnalytics(ownerId) {
   const totalDeltaDay = rows.reduce((sum, row) => sum + row.deltaDay, 0);
   const totalDeltaWeek = rows.reduce((sum, row) => sum + row.deltaWeek, 0);
   const totalDeltaMonth = rows.reduce((sum, row) => sum + row.deltaMonth, 0);
+
   return {
     channelCount: channels.length,
     totalSubscribers,
@@ -175,6 +184,7 @@ async function getOwnerAnalytics(ownerId) {
 
 module.exports = {
   collectAllSnapshots,
+  collectOwnerSnapshots,
   collectChannelSnapshot,
   getOwnerAnalytics,
   getChannelAnalytics,

@@ -1,11 +1,12 @@
 const { mainMenu } = require("../keyboards/mainMenu");
 const { analyticsMenu, analyticsChannelSelectKeyboard, channelAnalyticsKeyboard } = require("../keyboards/analyticsKeyboards");
-const analytics = require("../services/analyticsService");
+const legacyAnalytics = require("../services/analyticsService");
 const { upsertUser } = require("../repositories/userRepository");
 const { getUserChannels } = require("../services/channelService");
 const {
   getOwnerAnalytics,
   getChannelAnalyticsForOwner,
+  collectOwnerSnapshots,
   formatSigned,
   formatDateTime
 } = require("../services/analyticsCoreService");
@@ -13,6 +14,14 @@ const {
 function safeNumber(value) {
   if (value === null || value === undefined) return "нет данных";
   return Number(value).toLocaleString("ru-RU");
+}
+
+function buildNoSnapshotHint() {
+  return [
+    "",
+    "⚠️ Если видишь «нет снимка», нажми «🔄 Обновить снимок сейчас».",
+    "Бот должен быть администратором канала, иначе Telegram не отдаст количество подписчиков."
+  ].join("\n");
 }
 
 function buildChannelCard(row) {
@@ -37,11 +46,11 @@ function buildChannelCard(row) {
     `⏰ Запланировано: ${scheduledCount}`,
     `📄 Черновиков: ${draftCount}`,
     "",
-    "",
     `📈 График 7д: ${row.sparkline7d}`,
     "",
-    `🕒 Обновлено: ${latest ? formatDateTime(latest.createdAt) : "ожидаем первый снимок"}`
-  ].join("\n");
+    `🕒 Обновлено: ${latest ? formatDateTime(latest.createdAt) : "ожидаем первый снимок"}`,
+    !latest ? buildNoSnapshotHint() : ""
+  ].filter(Boolean).join("\n");
 }
 
 function buildGrowthText(row) {
@@ -51,9 +60,9 @@ function buildGrowthText(row) {
     `📢 ${row.channel.title}`,
     "━━━━━━━━━━━━━━",
     "",
-    `Сегодня / 24ч: ${formatSigned(row.deltaDay)}`,
-    `Неделя: ${formatSigned(row.deltaWeek)}`,
-    `Месяц: ${formatSigned(row.deltaMonth)}`,
+    `24 часа: ${formatSigned(row.deltaDay)}`,
+    `7 дней: ${formatSigned(row.deltaWeek)}`,
+    `30 дней: ${formatSigned(row.deltaMonth)}`,
     "",
     `Мини-график 24ч: ${row.sparkline24h}`,
     `Мини-график 7д: ${row.sparkline7d}`,
@@ -67,7 +76,7 @@ function buildHistoryText(row) {
     ? row.recentSnapshots.map((snapshot) => {
         return `${formatDateTime(snapshot.createdAt)} — ${safeNumber(snapshot.subscriberCount)}`;
       }).join("\n")
-    : "Пока нет истории. Дождись первого снимка scheduler.";
+    : "Пока нет истории. Нажми «🔄 Обновить снимок сейчас» или дождись scheduler.";
 
   return [
     "📅 История снимков",
@@ -104,30 +113,32 @@ function buildReportText(row) {
   ].join("\n");
 }
 
-  const tips = [];
-
-  if (!row.latest) tips.push("🔴 Нет снимков аналитики — дождись работы scheduler.");
-  if (row.deltaDay > 0) tips.push("🟢 За 24 часа есть рост аудитории.");
-  if (row.deltaDay === 0) tips.push("🟡 За 24 часа аудитория без изменений.");
-  if (row.deltaDay < 0) tips.push("🔴 За 24 часа есть падение аудитории.");
-  if (row.latest && row.latest.scheduledCount > 0) tips.push("🟢 Есть запланированный контент.");
-  if (row.latest && row.latest.scheduledCount === 0) tips.push("🟡 Нет запланированных публикаций.");
-  if (row.latest && row.latest.postCount > 0) tips.push("🟢 Канал уже публиковался через Channel OS.");
-
-  return [
-    "",
-    `📢 ${row.channel.title}`,
-    "━━━━━━━━━━━━━━",
-    "",
-    "",
-    ...tips,
-    "",
-  ].join("\n");
-}
-
 async function getRowForCallback(ctx, channelId) {
   const user = await upsertUser(ctx.from);
   return getChannelAnalyticsForOwner(user.id, channelId);
+}
+
+function buildOwnerOverview(data) {
+  const topRows = data.rows.slice(0, 5).map((row, index) => {
+    const subscribers = row.latest ? safeNumber(row.latest.subscriberCount) : "нет снимка";
+    return [
+      `${index + 1}. ${row.channel.title}`,
+      `👥 ${subscribers} | 24ч: ${formatSigned(row.deltaDay)} | 7д: ${formatSigned(row.deltaWeek)}`
+    ].join("\n");
+  }).join("\n\n") || "Пока нет данных. Нажми «🔄 Обновить снимок сейчас».";
+
+  return [
+    "📈 Общий обзор Analytics Pro",
+    "",
+    `📢 Каналов: ${data.channelCount}`,
+    `👥 Подписчиков всего: ${safeNumber(data.totalSubscribers)}`,
+    `📈 Рост за 24ч: ${formatSigned(data.totalDeltaDay)}`,
+    `📅 Рост за 7д: ${formatSigned(data.totalDeltaWeek)}`,
+    `🗓 Рост за 30д: ${formatSigned(data.totalDeltaMonth)}`,
+    "",
+    "📢 Каналы:",
+    topRows
+  ].join("\n");
 }
 
 function registerAnalyticsHandler(bot) {
@@ -135,10 +146,37 @@ function registerAnalyticsHandler(bot) {
     await ctx.answerCbQuery();
     return ctx.reply(
       [
-        "📊 Analytics Pro v0.2.1",
+        "📊 Analytics Pro v0.2.1.2",
         "",
+        "Аналитика строится по снимкам количества подписчиков.",
+        "Автоснимок: каждые 30 минут.",
         "",
         "Выбери раздел:"
+      ].join("\n"),
+      analyticsMenu()
+    );
+  });
+
+  bot.action("analytics:refresh", async (ctx) => {
+    await ctx.answerCbQuery("Собираю снимок...");
+    const user = await upsertUser(ctx.from);
+    const result = await collectOwnerSnapshots(ctx.telegram, user.id);
+    const data = await getOwnerAnalytics(user.id);
+
+    const errors = result.errors.length
+      ? "\n\n⚠️ Ошибки:\n" + result.errors.map((item) => `• ${item.title}: ${item.message}`).join("\n")
+      : "";
+
+    return ctx.reply(
+      [
+        "🔄 Снимок аналитики собран",
+        "",
+        `📢 Каналов: ${result.total}`,
+        `✅ Успешно: ${result.success}`,
+        `❌ Ошибок: ${result.failed}`,
+        errors,
+        "",
+        buildOwnerOverview(data)
       ].join("\n"),
       analyticsMenu()
     );
@@ -158,111 +196,60 @@ function registerAnalyticsHandler(bot) {
   bot.action(/^analytics:channel:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
-
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
-
     return ctx.reply(buildChannelCard(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:growth:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
-
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
-
     return ctx.reply(buildGrowthText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:history:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
-
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
-
     return ctx.reply(buildHistoryText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:report:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
-
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
-
     return ctx.reply(buildReportText(row), channelAnalyticsKeyboard(row.channel.id));
-  });
-
-    await ctx.answerCbQuery();
-    const row = await getRowForCallback(ctx, Number(ctx.match[1]));
-
-    if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
-
   });
 
   bot.action("analytics:core", async (ctx) => {
     await ctx.answerCbQuery();
-
     const user = await upsertUser(ctx.from);
     const data = await getOwnerAnalytics(user.id);
-
-    const topRows = data.rows.slice(0, 5).map((row, index) => {
-      const subscribers = row.latest ? safeNumber(row.latest.subscriberCount) : "нет снимка";
-      const day = formatSigned(row.deltaDay);
-      const week = formatSigned(row.deltaWeek);
-    }).join("\n\n") || "Пока нет данных. Первый снимок появится после запуска scheduler.";
-
-    return ctx.reply(
-      [
-        "📈 Общий обзор Analytics Pro",
-        "",
-        `📢 Каналов: ${data.channelCount}`,
-        `👥 Подписчиков всего: ${safeNumber(data.totalSubscribers)}`,
-        `📈 Рост за 24ч: ${formatSigned(data.totalDeltaDay)}`,
-        `📅 Рост за 7д: ${formatSigned(data.totalDeltaWeek)}`,
-        `🗓 Рост за 30д: ${formatSigned(data.totalDeltaMonth)}`,
-        "",
-        "📢 Каналы:",
-        topRows
-      ].join("\n"),
-      analyticsMenu()
-    );
+    return ctx.reply(buildOwnerOverview(data), analyticsMenu());
   });
 
   bot.action("analytics:overview", async (ctx) => {
     await ctx.answerCbQuery();
-    const data = await analytics.overview(ctx.from);
-
-    return ctx.reply(
-      [
-        "📈 Общий отчет",
-        "",
-        `📢 Каналов: ${data.channelCount}`,
-        `📝 Постов за 7 дней: ${data.posts7}`,
-        `🗓 Постов за 30 дней: ${data.posts30}`,
-        `📄 Черновиков: ${data.drafts}`,
-        `📅 Запланировано: ${data.scheduled}`,
-        "",
-        "👥 Аудитория за 7 дней:",
-        `➕ Подписались: ${data.subscribed7}`,
-        `➖ Отписались: ${data.unsubscribed7}`,
-        `📊 Баланс: ${data.net7 >= 0 ? "+" : ""}${data.net7}`
-      ].join("\n"),
-      analyticsMenu()
-    );
+    const user = await upsertUser(ctx.from);
+    const data = await getOwnerAnalytics(user.id);
+    return ctx.reply(buildOwnerOverview(data), analyticsMenu());
   });
 
   bot.action(/^analytics:period:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const days = Number(ctx.match[1]);
-    const data = await analytics.period(ctx.from, days);
+    const data = await legacyAnalytics.period(ctx.from, days);
 
     return ctx.reply(
       [
-        `📅 Отчет за ${days} дней`,
+        `📅 События за ${days} дней`,
         "",
         `📝 Постов: ${data.posts}`,
-        `➕ Подписались: ${data.subscribed}`,
-        `➖ Отписались: ${data.unsubscribed}`,
-        `📊 Баланс: ${data.subscribed - data.unsubscribed}`
+        `➕ Событий подписки: ${data.subscribed}`,
+        `➖ Событий отписки: ${data.unsubscribed}`,
+        `📊 Баланс событий: ${data.subscribed - data.unsubscribed}`,
+        "",
+        "Важно: это события Telegram, а не гарантированный полный список подписчиков."
       ].join("\n"),
       analyticsMenu()
     );
@@ -271,32 +258,30 @@ function registerAnalyticsHandler(bot) {
   bot.action("analytics:channels", async (ctx) => {
     await ctx.answerCbQuery();
     const channels = await getUserChannels(ctx.from);
-
     if (!channels.length) return ctx.reply("📢 Каналы пока не подключены.", mainMenu());
-
     return ctx.reply("📢 Выбери канал для подробной аналитики:", analyticsChannelSelectKeyboard(channels));
   });
 
   bot.action("analytics:subscribers", async (ctx) => {
     await ctx.answerCbQuery();
-    const data = await analytics.subscribersReport(ctx.from);
+    const data = await legacyAnalytics.subscribersReport(ctx.from);
 
     const recent = data.recent.length
       ? data.recent.map((event) => {
           const icon = event.eventType === "subscribed" ? "➕" : event.eventType === "unsubscribed" ? "➖" : "🔄";
           const name = event.username ? `@${event.username}` : [event.firstName, event.lastName].filter(Boolean).join(" ") || event.telegramUserId;
-          return `${icon} ${name}\n📢 ${event.channel.title}\n🕒 ${analytics.formatDate(event.createdAt)}`;
+          return `${icon} ${name}\n📢 ${event.channel.title}\n🕒 ${legacyAnalytics.formatDate(event.createdAt)}`;
         }).join("\n\n")
       : "Пока нет событий.";
 
     return ctx.reply(
       [
-        "👥 Подписки/отписки",
+        "👥 События подписок",
         "",
         "За 30 дней:",
-        `➕ Подписались: ${data.subscribed30}`,
-        `➖ Отписались: ${data.unsubscribed30}`,
-        `📊 Баланс: ${data.net30 >= 0 ? "+" : ""}${data.net30}`,
+        `➕ Событий подписки: ${data.subscribed30}`,
+        `➖ Событий отписки: ${data.unsubscribed30}`,
+        `📊 Баланс событий: ${data.net30 >= 0 ? "+" : ""}${data.net30}`,
         "",
         "Последние события:",
         recent,

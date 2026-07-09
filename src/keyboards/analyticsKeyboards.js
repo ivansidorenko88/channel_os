@@ -2,11 +2,12 @@ function analyticsMenu() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📢 Выбрать канал", callback_data: "analytics:select_channel" }],
+        [{ text: "🔄 Обновить снимок сейчас", callback_data: "analytics:refresh" }],
         [{ text: "📈 Общий обзор", callback_data: "analytics:core" }],
+        [{ text: "📢 Выбрать канал", callback_data: "analytics:select_channel" }],
         [{ text: "📅 За 7 дней", callback_data: "analytics:period:7" }],
         [{ text: "🗓 За 30 дней", callback_data: "analytics:period:30" }],
-        [{ text: "👥 Подписки/отписки", callback_data: "analytics:subscribers" }],
+        [{ text: "👥 События подписок", callback_data: "analytics:subscribers" }],
         [{ text: "🏠 Главное меню", callback_data: "menu:main" }]
       ]
     }
@@ -18,6 +19,7 @@ function analyticsChannelSelectKeyboard(channels) {
     { text: `📢 ${channel.title}`, callback_data: `analytics:channel:${channel.id}` }
   ]);
 
+  rows.push([{ text: "🔄 Обновить снимок сейчас", callback_data: "analytics:refresh" }]);
   rows.push([{ text: "◀️ Назад", callback_data: "analytics:main" }]);
   rows.push([{ text: "🏠 Главное меню", callback_data: "menu:main" }]);
 
@@ -33,8 +35,9 @@ function channelAnalyticsKeyboard(channelId) {
           { text: "📅 История", callback_data: `analytics:history:${channelId}` }
         ],
         [
-          { text: "📄 Отчёт 24ч", callback_data: `analytics:report:${channelId}` },
+          { text: "📄 Отчёт 24ч", callback_data: `analytics:report:${channelId}` }
         ],
+        [{ text: "🔄 Обновить снимок", callback_data: "analytics:refresh" }],
         [{ text: "◀️ К каналам", callback_data: "analytics:select_channel" }],
         [{ text: "🏠 Главное меню", callback_data: "menu:main" }]
       ]
