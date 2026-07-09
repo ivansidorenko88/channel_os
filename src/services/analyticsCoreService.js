@@ -66,7 +66,6 @@ function calculateBestInterval(snapshots) {
   return best;
 }
 
-function calculateHealthScore(row) {
   let score = 50;
 
   if (row.latest) score += 10;
@@ -80,7 +79,6 @@ function calculateHealthScore(row) {
   return Math.max(0, Math.min(100, score));
 }
 
-function getHealthLabel(score) {
   if (score >= 85) return "🟢 Отличное состояние";
   if (score >= 65) return "🟡 Нормальное состояние";
   return "🔴 Требует внимания";
@@ -144,9 +142,6 @@ async function getChannelAnalytics(channel) {
     bestInterval24h: calculateBestInterval(daySnapshots)
   };
 
-  row.healthScore = calculateHealthScore(row);
-  row.healthLabel = getHealthLabel(row.healthScore);
-
   return row;
 }
 
@@ -168,15 +163,12 @@ async function getOwnerAnalytics(ownerId) {
   const totalDeltaDay = rows.reduce((sum, row) => sum + row.deltaDay, 0);
   const totalDeltaWeek = rows.reduce((sum, row) => sum + row.deltaWeek, 0);
   const totalDeltaMonth = rows.reduce((sum, row) => sum + row.deltaMonth, 0);
-  const averageHealth = rows.length ? Math.round(rows.reduce((sum, row) => sum + row.healthScore, 0) / rows.length) : 0;
-
   return {
     channelCount: channels.length,
     totalSubscribers,
     totalDeltaDay,
     totalDeltaWeek,
     totalDeltaMonth,
-    averageHealth,
     rows
   };
 }
