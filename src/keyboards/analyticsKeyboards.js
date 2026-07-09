@@ -34,7 +34,6 @@ function channelAnalyticsKeyboard(channelId) {
         ],
         [
           { text: "📄 Отчёт 24ч", callback_data: `analytics:report:${channelId}` },
-          { text: "🟢 Health", callback_data: `analytics:health:${channelId}` }
         ],
         [{ text: "◀️ К каналам", callback_data: "analytics:select_channel" }],
         [{ text: "🏠 Главное меню", callback_data: "menu:main" }]

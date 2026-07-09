@@ -37,8 +37,6 @@ function buildChannelCard(row) {
     `⏰ Запланировано: ${scheduledCount}`,
     `📄 Черновиков: ${draftCount}`,
     "",
-    `🟢 Health: ${row.healthScore}/100`,
-    `${row.healthLabel}`,
     "",
     `📈 График 7д: ${row.sparkline7d}`,
     "",
@@ -106,7 +104,6 @@ function buildReportText(row) {
   ].join("\n");
 }
 
-function buildHealthText(row) {
   const tips = [];
 
   if (!row.latest) tips.push("🔴 Нет снимков аналитики — дождись работы scheduler.");
@@ -118,17 +115,13 @@ function buildHealthText(row) {
   if (row.latest && row.latest.postCount > 0) tips.push("🟢 Канал уже публиковался через Channel OS.");
 
   return [
-    "🟢 Channel Health",
     "",
     `📢 ${row.channel.title}`,
     "━━━━━━━━━━━━━━",
     "",
-    `${row.healthScore}/100`,
-    row.healthLabel,
     "",
     ...tips,
     "",
-    "Health Score — внутренний показатель Channel OS. Он учитывает наличие данных, рост аудитории, публикации и запланированный контент."
   ].join("\n");
 }
 
@@ -144,7 +137,6 @@ function registerAnalyticsHandler(bot) {
       [
         "📊 Analytics Pro v0.2.1",
         "",
-        "Аналитика стала удобнее: теперь можно открыть карточку канала, посмотреть рост, историю снимков, отчёт за 24 часа и Health Score.",
         "",
         "Выбери раздел:"
       ].join("\n"),
@@ -199,13 +191,11 @@ function registerAnalyticsHandler(bot) {
     return ctx.reply(buildReportText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
-  bot.action(/^analytics:health:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
 
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
 
-    return ctx.reply(buildHealthText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action("analytics:core", async (ctx) => {
@@ -218,7 +208,6 @@ function registerAnalyticsHandler(bot) {
       const subscribers = row.latest ? safeNumber(row.latest.subscriberCount) : "нет снимка";
       const day = formatSigned(row.deltaDay);
       const week = formatSigned(row.deltaWeek);
-      return `${index + 1}. ${row.channel.title}\n👥 ${subscribers} | 24ч: ${day} | 7д: ${week}\n🟢 Health: ${row.healthScore}/100\n${row.sparkline7d}`;
     }).join("\n\n") || "Пока нет данных. Первый снимок появится после запуска scheduler.";
 
     return ctx.reply(
@@ -230,7 +219,6 @@ function registerAnalyticsHandler(bot) {
         `📈 Рост за 24ч: ${formatSigned(data.totalDeltaDay)}`,
         `📅 Рост за 7д: ${formatSigned(data.totalDeltaWeek)}`,
         `🗓 Рост за 30д: ${formatSigned(data.totalDeltaMonth)}`,
-        `🟢 Средний Health: ${data.averageHealth}/100`,
         "",
         "📢 Каналы:",
         topRows
