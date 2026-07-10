@@ -1,5 +1,6 @@
 const { listAllChannels, listChannels, findChannel } = require("../repositories/channelRepository");
 const analyticsRepository = require("../repositories/analyticsRepository");
+const { getChatMemberCount } = require("./telegramChatService");
 
 function daysAgo(days) {
   const date = new Date();
@@ -70,7 +71,7 @@ function calculateBestInterval(snapshots) {
 }
 
 async function collectChannelSnapshot(telegram, channel, source = "scheduler") {
-  const subscriberCount = await telegram.getChatMemberCount(channel.telegramId);
+  const subscriberCount = await getChatMemberCount(telegram, channel.telegramId);
   const postCount = await analyticsRepository.countPostsForChannel(channel.id);
   const scheduledCount = await analyticsRepository.countScheduledForChannel(channel.id);
   const draftCount = await analyticsRepository.countDraftsForChannel(channel.id);

@@ -1,5 +1,6 @@
 const { findChannelByTelegramId, listAllChannels } = require("../repositories/channelRepository");
 const { createSubscriberEvent, createSnapshot } = require("../repositories/subscriberRepository");
+const { getChatMemberCount } = require("./telegramChatService");
 
 function normalizeEventType(oldStatus, newStatus) {
   const inactive = ["left", "kicked"];
@@ -40,7 +41,7 @@ async function createSubscriberSnapshots(telegram) {
 
   for (const channel of channels) {
     try {
-      const count = await telegram.getChatMemberCount(channel.telegramId);
+      const count = await getChatMemberCount(telegram, channel.telegramId);
       await createSnapshot({
         channelId: channel.id,
         subscriberCount: count
