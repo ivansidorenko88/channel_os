@@ -28,9 +28,14 @@ async function selectDraftChannel(from, draftId, channelId) {
   return draftRepository.setDraftChannel({ userId: user.id, draftId, channelId });
 }
 
+async function listUserDrafts(from, take = 10) {
+  const user = await upsertUser(from);
+  return draftRepository.listDrafts(user.id, take);
+}
+
 async function removeDraft(from, draftId) {
   const user = await upsertUser(from);
   return draftRepository.deleteDraft({ userId: user.id, draftId });
 }
 
-module.exports = { createDraftFromMessage, selectDraftChannel, removeDraft };
+module.exports = { createDraftFromMessage, selectDraftChannel, listUserDrafts, removeDraft };

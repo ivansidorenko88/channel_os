@@ -27,8 +27,17 @@ async function deleteDraft({ userId, draftId }) {
   return prisma.draft.deleteMany({ where: { id: Number(draftId), userId } });
 }
 
+async function listDrafts(userId, take = 10) {
+  return prisma.draft.findMany({
+    where: { userId },
+    include: { channel: true },
+    orderBy: { updatedAt: "desc" },
+    take
+  });
+}
+
 async function countDrafts(userId) {
   return prisma.draft.count({ where: { userId } });
 }
 
-module.exports = { createDraft, setDraftChannel, findDraft, deleteDraft, countDrafts };
+module.exports = { createDraft, setDraftChannel, findDraft, deleteDraft, listDrafts, countDrafts };

@@ -109,7 +109,7 @@ function buildReportText(row) {
     "",
     `🔥 Лучший интервал: ${bestText}`,
     "",
-    "Следующий шаг: в v0.2.2 добавим ежедневные отчёты и экспорт."
+    "Данные обновляются автоматически каждые 30 минут."
   ].join("\n");
 }
 
@@ -146,7 +146,7 @@ function registerAnalyticsHandler(bot) {
     await ctx.answerCbQuery();
     return ctx.reply(
       [
-        "📊 Analytics Pro v0.2.1.3",
+        "📊 Analytics Pro v0.3",
         "",
         "Аналитика строится по снимкам количества подписчиков.",
         "Автоснимок: каждые 30 минут.\nДля проверки scheduler используй /debug.",

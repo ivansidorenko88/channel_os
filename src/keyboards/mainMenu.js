@@ -1,26 +1,17 @@
+const {
+  dashboardKeyboard,
+  dashboardBackKeyboard
+} = require("./dashboardKeyboard");
+
 function mainMenu() {
-  return {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "📢 Мои каналы", callback_data: "channels:list" }],
-        [{ text: "➕ Добавить канал", callback_data: "channels:add" }],
-        [{ text: "📝 Создать пост", callback_data: "draft:create" }],
-        [{ text: "📅 Планировщик", callback_data: "schedule:list" }],
-        [{ text: "📊 Аналитика", callback_data: "analytics:main" }],
-        [{ text: "⚙️ Настройки", callback_data: "settings:main" }]
-      ]
-    }
-  };
+  return dashboardKeyboard();
 }
 
 function backToMenu() {
-  return {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "🏠 Главное меню", callback_data: "menu:main" }]
-      ]
-    }
-  };
+  return dashboardBackKeyboard();
 }
 
-module.exports = { mainMenu, backToMenu };
+module.exports = {
+  mainMenu,
+  backToMenu
+};

@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.2.1-8",
-  "description": "Channel OS v0.2.1.8 callback handler cleanup",
+  "version": "0.3.0",
+  "description": "Channel OS v0.3.0 Telegram Dashboard MVP",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

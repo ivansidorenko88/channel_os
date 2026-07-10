@@ -3,6 +3,7 @@ const { BOT_TOKEN } = require("./config/env");
 const { isExpiredCallbackError } = require("./utils/safeCallback");
 
 const { registerStartHandler } = require("./handlers/startHandler");
+const { registerDashboardHandler } = require("./handlers/dashboardHandler");
 const { registerChannelHandler } = require("./handlers/channelHandler");
 const { registerDraftHandler } = require("./handlers/draftHandler");
 const { registerScheduleHandler } = require("./handlers/scheduleHandler");
@@ -30,6 +31,7 @@ bot.catch((error, ctx) => {
   }
 });
 
+registerDashboardHandler(bot);
 registerStartHandler(bot);
 registerChannelHandler(bot);
 registerDraftHandler(bot);
@@ -52,7 +54,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.1.8 Callback Cleanup started");
+console.log("Channel OS v0.3.0 Dashboard MVP started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
