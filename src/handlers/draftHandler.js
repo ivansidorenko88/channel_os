@@ -5,7 +5,6 @@ const { getUserChannels } = require("../services/channelService");
 const { createDraftFromMessage, selectDraftChannel, removeDraft } = require("../services/draftService");
 const { publishDraft } = require("../services/postService");
 const { safeAnswerCbQuery } = require("../utils/safeCallback");
-
 function registerDraftHandler(bot) {
   bot.action("draft:create", async (ctx) => {
     await safeAnswerCbQuery(ctx);

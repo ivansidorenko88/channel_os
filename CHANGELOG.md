@@ -1,3 +1,12 @@
+# v0.2.1.7
+
+🐞 Исправлено
+
+• Исправлен `SyntaxError: Unexpected token '{'`
+• Импорт `safeAnswerCbQuery` больше не вставляется внутрь многострочного `require`
+• Проверены все обработчики callback-кнопок
+• Все JavaScript-файлы прошли `node --check`
+
 # v0.2.1.6
 
 🐞 Исправлено

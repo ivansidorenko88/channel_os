@@ -2,7 +2,6 @@ const { mainMenu, backToMenu } = require("../keyboards/mainMenu");
 const { setState, getState, clearState } = require("../middleware/state");
 const { connectChannelFromForward, getUserChannels } = require("../services/channelService");
 const { safeAnswerCbQuery } = require("../utils/safeCallback");
-
 function registerChannelHandler(bot) {
   bot.action("channels:add", async (ctx) => {
     await safeAnswerCbQuery(ctx);

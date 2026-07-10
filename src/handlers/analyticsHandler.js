@@ -3,9 +3,9 @@ const { analyticsMenu, analyticsChannelSelectKeyboard, channelAnalyticsKeyboard 
 const legacyAnalytics = require("../services/analyticsService");
 const { upsertUser } = require("../repositories/userRepository");
 const { getUserChannels } = require("../services/channelService");
-const {
 const { safeAnswerCbQuery } = require("../utils/safeCallback");
-  getOwnerAnalytics,
+const {
+getOwnerAnalytics,
   getChannelAnalyticsForOwner,
   collectOwnerSnapshots,
   formatSigned,

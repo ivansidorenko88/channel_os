@@ -1,6 +1,6 @@
-const {
 const { safeAnswerCbQuery } = require("../utils/safeCallback");
-  getAnalyticsSchedulerStatus,
+const {
+getAnalyticsSchedulerStatus,
   runAnalyticsSchedulerNow
 } = require("../scheduler/analyticsCoreScheduler");
 

@@ -150,3 +150,19 @@ Bad Request: query is too old and response timeout expired or query ID is invali
 ```
 
 и не должен отображаться как `Bot error`.
+
+## v0.2.1.7 — Syntax Fix
+
+Исправлена некорректная позиция импорта `safeAnswerCbQuery`.
+
+Перед упаковкой все `.js` файлы проверены командой:
+
+```bash
+node --check
+```
+
+После деплоя в логах должно появиться:
+
+```text
+Channel OS v0.2.1.7 Syntax Fix started
+```

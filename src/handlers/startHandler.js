@@ -1,7 +1,6 @@
 const { mainMenu } = require("../keyboards/mainMenu");
 const { upsertUser } = require("../repositories/userRepository");
 const { safeAnswerCbQuery } = require("../utils/safeCallback");
-
 function registerStartHandler(bot) {
   bot.start(async (ctx) => {
     await upsertUser(ctx.from);
