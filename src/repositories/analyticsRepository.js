@@ -22,6 +22,24 @@ async function firstAnalyticsSnapshotSince(channelId, since) {
 }
 
 
+
+async function earliestAnalyticsSnapshot(channelId) {
+  return prisma.analyticsSnapshot.findFirst({
+    where: { channelId },
+    orderBy: { createdAt: "asc" }
+  });
+}
+
+async function closestAnalyticsSnapshotAtOrAfter(channelId, at) {
+  return prisma.analyticsSnapshot.findFirst({
+    where: {
+      channelId,
+      createdAt: { gte: at }
+    },
+    orderBy: { createdAt: "asc" }
+  });
+}
+
 async function closestAnalyticsSnapshotAtOrBefore(channelId, at) {
   return prisma.analyticsSnapshot.findFirst({
     where: {
@@ -73,6 +91,8 @@ module.exports = {
   createAnalyticsSnapshot,
   latestAnalyticsSnapshot,
   firstAnalyticsSnapshotSince,
+  earliestAnalyticsSnapshot,
+  closestAnalyticsSnapshotAtOrAfter,
   closestAnalyticsSnapshotAtOrBefore,
   listAnalyticsSnapshotsSince,
   listRecentAnalyticsSnapshots,

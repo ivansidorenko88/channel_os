@@ -2,10 +2,12 @@ const { listAllChannels, listChannels, findChannel } = require("../repositories/
 const analyticsRepository = require("../repositories/analyticsRepository");
 const { getChatMemberCount } = require("./telegramChatService");
 
+const SNAPSHOT_INTERVAL_MINUTES = Number(
+  process.env.ANALYTICS_INTERVAL_MINUTES || 30
+);
+
 function daysAgo(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date;
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
 function getDelta(current, previous) {
@@ -15,12 +17,12 @@ function getDelta(current, previous) {
 
 function formatSigned(value) {
   if (value === null || value === undefined) {
-    return "недостаточно данных";
+    return "собираем данные";
   }
 
   const number = Number(value);
   if (!Number.isFinite(number)) {
-    return "недостаточно данных";
+    return "собираем данные";
   }
 
   return number >= 0 ? `+${number}` : String(number);
@@ -37,28 +39,52 @@ function formatDateTime(date) {
   });
 }
 
-function buildSparkline(values) {
-  const clean = values
-    .filter((value) => Number.isFinite(Number(value)))
-    .map(Number);
+function formatDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    return "нет данных";
+  }
 
-  if (!clean.length) return "нет данных";
-  if (clean.length === 1) return "▃";
+  const totalMinutes = Math.floor(milliseconds / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
 
-  const blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
-  const min = Math.min(...clean);
-  const max = Math.max(...clean);
+  if (days > 0) {
+    return hours > 0 ? `${days} д. ${hours} ч.` : `${days} д.`;
+  }
 
-  if (min === max) return clean.map(() => "▃").join("");
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} ч. ${minutes} мин.` : `${hours} ч.`;
+  }
 
-  return clean
-    .map((value) => {
-      const index = Math.round(
-        ((value - min) / (max - min)) * (blocks.length - 1)
-      );
-      return blocks[index];
-    })
-    .join("");
+  return `${Math.max(minutes, 0)} мин.`;
+}
+
+function downsample(values, maxPoints = 6) {
+  if (values.length <= maxPoints) return values;
+
+  const result = [];
+  const lastIndex = values.length - 1;
+
+  for (let index = 0; index < maxPoints; index += 1) {
+    const sourceIndex = Math.round((index / (maxPoints - 1)) * lastIndex);
+    result.push(values[sourceIndex]);
+  }
+
+  return result;
+}
+
+function buildTrendLine(snapshots, maxPoints = 6) {
+  if (!snapshots || !snapshots.length) return "нет данных";
+
+  const values = downsample(
+    snapshots.map((snapshot) => Number(snapshot.subscriberCount)),
+    maxPoints
+  );
+
+  return values
+    .map((value) => value.toLocaleString("ru-RU"))
+    .join(" → ");
 }
 
 function calculateBestInterval(snapshots) {
@@ -81,6 +107,69 @@ function calculateBestInterval(snapshots) {
   }
 
   return best;
+}
+
+function chooseClosestSnapshot(before, after, target) {
+  if (!before) return after || null;
+  if (!after) return before;
+
+  const targetTime = new Date(target).getTime();
+  const beforeDistance = Math.abs(
+    targetTime - new Date(before.createdAt).getTime()
+  );
+  const afterDistance = Math.abs(
+    new Date(after.createdAt).getTime() - targetTime
+  );
+
+  return beforeDistance <= afterDistance ? before : after;
+}
+
+async function getPeriodBaseline(channelId, earliest, days) {
+  const target = daysAgo(days);
+
+  if (!earliest || new Date(earliest.createdAt) > target) {
+    return null;
+  }
+
+  const [before, after] = await Promise.all([
+    analyticsRepository.closestAnalyticsSnapshotAtOrBefore(channelId, target),
+    analyticsRepository.closestAnalyticsSnapshotAtOrAfter(channelId, target)
+  ]);
+
+  return chooseClosestSnapshot(before, after, target);
+}
+
+function getHistoryState(earliest, latest) {
+  if (!earliest || !latest) {
+    return {
+      availableMs: 0,
+      availableText: "нет данных",
+      remaining24hMs: 24 * 60 * 60 * 1000,
+      remaining24hText: "24 ч.",
+      has24h: false,
+      has7d: false,
+      has30d: false
+    };
+  }
+
+  const availableMs = Math.max(
+    0,
+    new Date(latest.createdAt).getTime() -
+      new Date(earliest.createdAt).getTime()
+  );
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const remaining24hMs = Math.max(0, dayMs - availableMs);
+
+  return {
+    availableMs,
+    availableText: formatDuration(availableMs),
+    remaining24hMs,
+    remaining24hText: formatDuration(remaining24hMs),
+    has24h: availableMs >= dayMs,
+    has7d: availableMs >= 7 * dayMs,
+    has30d: availableMs >= 30 * dayMs
+  };
 }
 
 async function collectChannelSnapshot(telegram, channel, source = "scheduler") {
@@ -167,57 +256,37 @@ async function collectOwnerSnapshots(telegram, ownerId) {
 }
 
 async function getChannelAnalytics(channel) {
-  const latest =
-    await analyticsRepository.latestAnalyticsSnapshot(channel.id);
+  const [latest, earliest] = await Promise.all([
+    analyticsRepository.latestAnalyticsSnapshot(channel.id),
+    analyticsRepository.earliestAnalyticsSnapshot(channel.id)
+  ]);
 
-  const day = latest
-    ? await analyticsRepository.closestAnalyticsSnapshotAtOrBefore(
-        channel.id,
-        daysAgo(1)
-      )
-    : null;
+  const [day, week, month] = latest
+    ? await Promise.all([
+        getPeriodBaseline(channel.id, earliest, 1),
+        getPeriodBaseline(channel.id, earliest, 7),
+        getPeriodBaseline(channel.id, earliest, 30)
+      ])
+    : [null, null, null];
 
-  const week = latest
-    ? await analyticsRepository.closestAnalyticsSnapshotAtOrBefore(
-        channel.id,
-        daysAgo(7)
-      )
-    : null;
+  const [weekSnapshots, daySnapshots, recentSnapshots] = await Promise.all([
+    analyticsRepository.listAnalyticsSnapshotsSince(channel.id, daysAgo(7)),
+    analyticsRepository.listAnalyticsSnapshotsSince(channel.id, daysAgo(1)),
+    analyticsRepository.listRecentAnalyticsSnapshots(channel.id, 8)
+  ]);
 
-  const month = latest
-    ? await analyticsRepository.closestAnalyticsSnapshotAtOrBefore(
-        channel.id,
-        daysAgo(30)
-      )
-    : null;
-
-  const weekSnapshots =
-    await analyticsRepository.listAnalyticsSnapshotsSince(
-      channel.id,
-      daysAgo(7)
-    );
-
-  const daySnapshots =
-    await analyticsRepository.listAnalyticsSnapshotsSince(
-      channel.id,
-      daysAgo(1)
-    );
-
-  const recentSnapshots =
-    await analyticsRepository.listRecentAnalyticsSnapshots(channel.id, 8);
+  const history = getHistoryState(earliest, latest);
 
   return {
     channel,
     latest,
+    earliest,
+    history,
     deltaDay: getDelta(latest, day),
     deltaWeek: getDelta(latest, week),
     deltaMonth: getDelta(latest, month),
-    sparkline7d: buildSparkline(
-      weekSnapshots.map((snapshot) => snapshot.subscriberCount)
-    ),
-    sparkline24h: buildSparkline(
-      daySnapshots.map((snapshot) => snapshot.subscriberCount)
-    ),
+    trend7d: buildTrendLine(weekSnapshots),
+    trend24h: buildTrendLine(daySnapshots),
     daySnapshots,
     recentSnapshots,
     bestInterval24h: calculateBestInterval(daySnapshots)
@@ -232,20 +301,26 @@ async function getChannelAnalyticsForOwner(ownerId, channelId) {
 
 function aggregateDelta(rows, field) {
   if (!rows.length) return null;
-  if (rows.some((row) => row[field] === null || row[field] === undefined)) {
+
+  const rowsWithSnapshot = rows.filter((row) => row.latest);
+  if (!rowsWithSnapshot.length) return null;
+
+  if (
+    rowsWithSnapshot.some(
+      (row) => row[field] === null || row[field] === undefined
+    )
+  ) {
     return null;
   }
 
-  return rows.reduce((sum, row) => sum + row[field], 0);
+  return rowsWithSnapshot.reduce((sum, row) => sum + row[field], 0);
 }
 
 async function getOwnerAnalytics(ownerId) {
   const channels = await listChannels(ownerId);
-  const rows = [];
-
-  for (const channel of channels) {
-    rows.push(await getChannelAnalytics(channel));
-  }
+  const rows = await Promise.all(
+    channels.map((channel) => getChannelAnalytics(channel))
+  );
 
   const totalSubscribers = rows.reduce(
     (sum, row) => sum + (row.latest ? row.latest.subscriberCount : 0),
@@ -259,6 +334,22 @@ async function getOwnerAnalytics(ownerId) {
     return latest;
   }, null);
 
+  const earliestSnapshotAt = rows.reduce((earliest, row) => {
+    const date = row.earliest?.createdAt;
+    if (!date) return earliest;
+    if (!earliest || new Date(date) < new Date(earliest)) return date;
+    return earliest;
+  }, null);
+
+  const historyAvailableMs =
+    earliestSnapshotAt && latestSnapshotAt
+      ? Math.max(
+          0,
+          new Date(latestSnapshotAt).getTime() -
+            new Date(earliestSnapshotAt).getTime()
+        )
+      : 0;
+
   return {
     channelCount: channels.length,
     totalSubscribers,
@@ -266,6 +357,10 @@ async function getOwnerAnalytics(ownerId) {
     totalDeltaWeek: aggregateDelta(rows, "deltaWeek"),
     totalDeltaMonth: aggregateDelta(rows, "deltaMonth"),
     latestSnapshotAt,
+    earliestSnapshotAt,
+    historyAvailableMs,
+    historyAvailableText: formatDuration(historyAvailableMs),
+    snapshotIntervalMinutes: SNAPSHOT_INTERVAL_MINUTES,
     rows
   };
 }
@@ -277,7 +372,8 @@ module.exports = {
   getOwnerAnalytics,
   getChannelAnalytics,
   getChannelAnalyticsForOwner,
-  buildSparkline,
+  buildTrendLine,
   formatSigned,
-  formatDateTime
+  formatDateTime,
+  formatDuration
 };

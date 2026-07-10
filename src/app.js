@@ -1,6 +1,7 @@
 const { Telegraf } = require("telegraf");
 const { BOT_TOKEN } = require("./config/env");
 const { isExpiredCallbackError } = require("./utils/safeCallback");
+const { callbackSafety } = require("./middleware/callbackSafety");
 
 const { registerStartHandler } = require("./handlers/startHandler");
 const { registerDashboardHandler } = require("./handlers/dashboardHandler");
@@ -16,6 +17,8 @@ const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnap
 const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreScheduler");
 
 const bot = new Telegraf(BOT_TOKEN);
+
+bot.use(callbackSafety);
 
 bot.catch((error, ctx) => {
   if (isExpiredCallbackError(error)) {
@@ -54,7 +57,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.3.0 Dashboard MVP started");
+console.log("Channel OS v0.3.1 Dashboard Polish started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
