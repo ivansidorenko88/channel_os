@@ -8,6 +8,7 @@ const { registerScheduleHandler } = require("./handlers/scheduleHandler");
 const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
 const { registerMemberHandler } = require("./handlers/memberHandler");
 const { registerSettingsHandler } = require("./handlers/settingsHandler");
+const { registerDebugHandler } = require("./handlers/debugHandler");
 const { startPublisherScheduler } = require("./scheduler/publisher");
 const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnapshots");
 const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreScheduler");
@@ -26,6 +27,7 @@ registerScheduleHandler(bot);
 registerAnalyticsHandler(bot);
 registerMemberHandler(bot);
 registerSettingsHandler(bot);
+registerDebugHandler(bot);
 
 startPublisherScheduler(bot);
 startSubscriberSnapshotScheduler(bot);
@@ -40,7 +42,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.1 Analytics Pro UI started");
+console.log("Channel OS v0.2.1.3 Analytics Engine started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

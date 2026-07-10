@@ -146,10 +146,10 @@ function registerAnalyticsHandler(bot) {
     await ctx.answerCbQuery();
     return ctx.reply(
       [
-        "📊 Analytics Pro v0.2.1.2",
+        "📊 Analytics Pro v0.2.1.3",
         "",
         "Аналитика строится по снимкам количества подписчиков.",
-        "Автоснимок: каждые 30 минут.",
+        "Автоснимок: каждые 30 минут.\nДля проверки scheduler используй /debug.",
         "",
         "Выбери раздел:"
       ].join("\n"),
