@@ -42,7 +42,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.1.4 Telegram API Fix started");
+console.log("Channel OS v0.2.1.5 Callback Fix started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

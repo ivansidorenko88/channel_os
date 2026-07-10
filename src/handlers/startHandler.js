@@ -1,5 +1,6 @@
 const { mainMenu } = require("../keyboards/mainMenu");
 const { upsertUser } = require("../repositories/userRepository");
+const { safeAnswerCbQuery } = require("../utils/safeCallback");
 
 function registerStartHandler(bot) {
   bot.start(async (ctx) => {
@@ -22,7 +23,7 @@ function registerStartHandler(bot) {
   });
 
   bot.action("menu:main", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     await ctx.reply("🏠 Главное меню", mainMenu());
   });
 }

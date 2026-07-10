@@ -1,8 +1,9 @@
 const { mainMenu } = require("../keyboards/mainMenu");
+const { safeAnswerCbQuery } = require("../utils/safeCallback");
 
 function registerSettingsHandler(bot) {
   bot.action("settings:main", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
 
     return ctx.reply(
       [

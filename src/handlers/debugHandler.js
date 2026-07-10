@@ -1,4 +1,5 @@
 const {
+const { safeAnswerCbQuery } = require("../utils/safeCallback");
   getAnalyticsSchedulerStatus,
   runAnalyticsSchedulerNow
 } = require("../scheduler/analyticsCoreScheduler");
@@ -66,12 +67,12 @@ function registerDebugHandler(bot) {
   });
 
   bot.action("debug:analytics:status", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     return ctx.reply(buildDebugText(), debugKeyboard());
   });
 
   bot.action("debug:analytics:run", async (ctx) => {
-    await ctx.answerCbQuery("Запускаю сбор снимков...");
+    await safeAnswerCbQuery(ctx, "Запускаю сбор снимков...");
     await ctx.reply("🔄 Запускаю ручной сбор снимков Analytics...");
 
     const result = await runAnalyticsSchedulerNow(ctx);

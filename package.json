@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.2.1-4",
-  "description": "Channel OS v0.2.1.4 Telegram getChatMemberCount API fix",
+  "version": "0.2.1-5",
+  "description": "Channel OS v0.2.1.5 safe callback query fix",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

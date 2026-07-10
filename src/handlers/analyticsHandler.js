@@ -4,6 +4,7 @@ const legacyAnalytics = require("../services/analyticsService");
 const { upsertUser } = require("../repositories/userRepository");
 const { getUserChannels } = require("../services/channelService");
 const {
+const { safeAnswerCbQuery } = require("../utils/safeCallback");
   getOwnerAnalytics,
   getChannelAnalyticsForOwner,
   collectOwnerSnapshots,
@@ -143,7 +144,7 @@ function buildOwnerOverview(data) {
 
 function registerAnalyticsHandler(bot) {
   bot.action("analytics:main", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     return ctx.reply(
       [
         "📊 Analytics Pro v0.2.1.3",
@@ -158,7 +159,7 @@ function registerAnalyticsHandler(bot) {
   });
 
   bot.action("analytics:refresh", async (ctx) => {
-    await ctx.answerCbQuery("Собираю снимок...");
+    await safeAnswerCbQuery(ctx, "Собираю снимок...");
     const user = await upsertUser(ctx.from);
     const result = await collectOwnerSnapshots(ctx.telegram, user.id);
     const data = await getOwnerAnalytics(user.id);
@@ -183,7 +184,7 @@ function registerAnalyticsHandler(bot) {
   });
 
   bot.action("analytics:select_channel", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const channels = await getUserChannels(ctx.from);
 
     if (!channels.length) {
@@ -194,49 +195,49 @@ function registerAnalyticsHandler(bot) {
   });
 
   bot.action(/^analytics:channel:(\d+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
     return ctx.reply(buildChannelCard(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:growth:(\d+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
     return ctx.reply(buildGrowthText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:history:(\d+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
     return ctx.reply(buildHistoryText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action(/^analytics:report:(\d+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const row = await getRowForCallback(ctx, Number(ctx.match[1]));
     if (!row) return ctx.reply("❌ Канал не найден.", analyticsMenu());
     return ctx.reply(buildReportText(row), channelAnalyticsKeyboard(row.channel.id));
   });
 
   bot.action("analytics:core", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const user = await upsertUser(ctx.from);
     const data = await getOwnerAnalytics(user.id);
     return ctx.reply(buildOwnerOverview(data), analyticsMenu());
   });
 
   bot.action("analytics:overview", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const user = await upsertUser(ctx.from);
     const data = await getOwnerAnalytics(user.id);
     return ctx.reply(buildOwnerOverview(data), analyticsMenu());
   });
 
   bot.action(/^analytics:period:(\d+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const days = Number(ctx.match[1]);
     const data = await legacyAnalytics.period(ctx.from, days);
 
@@ -256,14 +257,14 @@ function registerAnalyticsHandler(bot) {
   });
 
   bot.action("analytics:channels", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const channels = await getUserChannels(ctx.from);
     if (!channels.length) return ctx.reply("📢 Каналы пока не подключены.", mainMenu());
     return ctx.reply("📢 Выбери канал для подробной аналитики:", analyticsChannelSelectKeyboard(channels));
   });
 
   bot.action("analytics:subscribers", async (ctx) => {
-    await ctx.answerCbQuery();
+    await safeAnswerCbQuery(ctx);
     const data = await legacyAnalytics.subscribersReport(ctx.from);
 
     const recent = data.recent.length
