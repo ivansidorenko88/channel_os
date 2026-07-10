@@ -138,3 +138,15 @@ Bad Request: query is too old and response timeout expired or query ID is invali
 2. Нажми кнопки разделов.
 3. Нажми старую кнопку из предыдущего сообщения.
 4. В логах может появиться предупреждение `[Callback] Ignored expired callback query`, но `Bot error` быть не должно.
+
+## v0.2.1.6 — Global Callback Guard
+
+Добавлен второй уровень защиты в `bot.catch`.
+
+После деплоя просроченный callback должен давать только:
+
+```text
+[Callback] Globally ignored expired callback query
+```
+
+и не должен отображаться как `Bot error`.

@@ -1,5 +1,6 @@
 const { Telegraf } = require("telegraf");
 const { BOT_TOKEN } = require("./config/env");
+const { isExpiredCallbackError } = require("./utils/safeCallback");
 
 const { registerStartHandler } = require("./handlers/startHandler");
 const { registerChannelHandler } = require("./handlers/channelHandler");
@@ -16,8 +17,17 @@ const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreSchedu
 const bot = new Telegraf(BOT_TOKEN);
 
 bot.catch((error, ctx) => {
+  if (isExpiredCallbackError(error)) {
+    const callbackId = ctx?.callbackQuery?.id || "unknown";
+    console.warn(`[Callback] Globally ignored expired callback query: ${callbackId}`);
+    return;
+  }
+
   console.error("Bot error:", error);
-  if (ctx && ctx.reply) ctx.reply("❌ Произошла ошибка. Попробуй еще раз.");
+
+  if (ctx && ctx.reply) {
+    ctx.reply("❌ Произошла ошибка. Попробуй еще раз.").catch(() => {});
+  }
 });
 
 registerStartHandler(bot);
@@ -42,7 +52,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.1.5 Callback Fix started");
+console.log("Channel OS v0.2.1.6 Global Callback Guard started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
