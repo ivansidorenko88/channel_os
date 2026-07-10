@@ -1,7 +1,6 @@
 const { mainMenu } = require("../keyboards/mainMenu");
 const { getState, clearState } = require("../middleware/state");
 const { parseDateTimeRu, scheduleDraft, listUserScheduled } = require("../services/scheduleService");
-const { safeAnswerCbQuery } = require("../utils/safeCallback");
 function formatDate(date) {
   return new Date(date).toLocaleString("ru-RU", {
     day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
@@ -28,7 +27,7 @@ function registerScheduleHandler(bot) {
   });
 
   bot.action("schedule:list", async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     const items = await listUserScheduled(ctx.from);
     if (!items.length) return ctx.reply("📅 Запланированных постов пока нет.", mainMenu());
 

@@ -52,7 +52,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.2.1.7 Syntax Fix started");
+console.log("Channel OS v0.2.1.8 Callback Cleanup started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

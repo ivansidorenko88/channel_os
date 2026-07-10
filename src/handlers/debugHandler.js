@@ -1,4 +1,3 @@
-const { safeAnswerCbQuery } = require("../utils/safeCallback");
 const {
 getAnalyticsSchedulerStatus,
   runAnalyticsSchedulerNow
@@ -67,12 +66,12 @@ function registerDebugHandler(bot) {
   });
 
   bot.action("debug:analytics:status", async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     return ctx.reply(buildDebugText(), debugKeyboard());
   });
 
   bot.action("debug:analytics:run", async (ctx) => {
-    await safeAnswerCbQuery(ctx, "Запускаю сбор снимков...");
+    await ctx.answerCbQuery("Запускаю сбор снимков...");
     await ctx.reply("🔄 Запускаю ручной сбор снимков Analytics...");
 
     const result = await runAnalyticsSchedulerNow(ctx);

@@ -166,3 +166,15 @@ node --check
 ```text
 Channel OS v0.2.1.7 Syntax Fix started
 ```
+
+## v0.2.1.8 — Callback Cleanup
+
+`safeAnswerCbQuery` полностью удалён из файлов обработчиков.
+
+Просроченные callback query перехватываются глобально в `bot.catch`, поэтому отдельные импорты больше не нужны.
+
+Контрольная строка после запуска:
+
+```text
+Channel OS v0.2.1.8 Callback Cleanup started
+```

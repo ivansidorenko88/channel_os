@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.2.1-7",
-  "description": "Channel OS v0.2.1.7 callback import syntax fix",
+  "version": "0.2.1-8",
+  "description": "Channel OS v0.2.1.8 callback handler cleanup",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

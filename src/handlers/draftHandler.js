@@ -4,10 +4,9 @@ const { setState, getState, clearState } = require("../middleware/state");
 const { getUserChannels } = require("../services/channelService");
 const { createDraftFromMessage, selectDraftChannel, removeDraft } = require("../services/draftService");
 const { publishDraft } = require("../services/postService");
-const { safeAnswerCbQuery } = require("../utils/safeCallback");
 function registerDraftHandler(bot) {
   bot.action("draft:create", async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     setState(ctx.from.id, "WAITING_DRAFT_CONTENT");
 
     await ctx.reply(
@@ -36,14 +35,14 @@ function registerDraftHandler(bot) {
   });
 
   bot.action(/^draft:select_channel:(\d+):(\d+)$/, async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     const draft = await selectDraftChannel(ctx.from, Number(ctx.match[1]), Number(ctx.match[2]));
     if (!draft) return ctx.reply("❌ Черновик не найден.", mainMenu());
     return ctx.reply("📢 Канал выбран. Что делаем дальше?", draftActionsKeyboard(draft.id));
   });
 
   bot.action(/^draft:publish:(\d+)$/, async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
 
     try {
       const result = await publishDraft(ctx, Number(ctx.match[1]));
@@ -56,13 +55,13 @@ function registerDraftHandler(bot) {
   });
 
   bot.action(/^draft:schedule:(\d+)$/, async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     setState(ctx.from.id, "WAITING_SCHEDULE_TIME", { draftId: Number(ctx.match[1]) });
     return ctx.reply("📅 Отправь дату и время в формате:\n\n25.07.2026 21:30");
   });
 
   bot.action(/^draft:delete:(\d+)$/, async (ctx) => {
-    await safeAnswerCbQuery(ctx);
+    await ctx.answerCbQuery();
     await removeDraft(ctx.from, Number(ctx.match[1]));
     return ctx.reply("🗑 Черновик удален.", mainMenu());
   });
