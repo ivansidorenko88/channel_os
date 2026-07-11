@@ -1,5 +1,5 @@
 const { Telegraf } = require("telegraf");
-const { BOT_TOKEN } = require("./config/env");
+const { BOT_TOKEN, ADMIN_IDS } = require("./config/env");
 const { isExpiredCallbackError } = require("./utils/safeCallback");
 const { callbackSafety } = require("./middleware/callbackSafety");
 
@@ -59,7 +59,8 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.3.2 Admin Statistics started");
+console.log("Channel OS v0.3.2.1 Admin Access Fix started");
+console.log(`[Admin] Loaded administrator IDs: ${ADMIN_IDS.length}`);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

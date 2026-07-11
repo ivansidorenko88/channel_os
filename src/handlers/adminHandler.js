@@ -1,4 +1,7 @@
-const { isAdminContext } = require("../utils/adminAccess");
+const {
+  isAdminContext,
+  getAdminAccessDiagnostics
+} = require("../utils/adminAccess");
 const { buildAdminStatistics } = require("../services/adminService");
 const { adminKeyboard } = require("../keyboards/adminKeyboard");
 
@@ -55,6 +58,26 @@ function registerAdminHandler(bot) {
       { parse_mode: "HTML" }
     );
   });
+
+
+bot.command("admin_check", async (ctx) => {
+  const diagnostics = getAdminAccessDiagnostics(ctx.from.id);
+
+  return ctx.reply(
+    [
+      "🛡 Проверка доступа администратора",
+      "",
+      `Твой Telegram ID: ${diagnostics.telegramId}`,
+      `ADMIN_IDS найден в окружении: ${diagnostics.environmentValuePresent ? "да" : "нет"}`,
+      `Распознано администраторов: ${diagnostics.configuredAdminCount}`,
+      `Доступ: ${diagnostics.hasAccess ? "✅ разрешён" : "❌ запрещён"}`,
+      "",
+      diagnostics.hasAccess
+        ? "Теперь команда /admin должна открываться."
+        : "Сверь Telegram ID, значение ADMIN_IDS и обязательно перезапусти контейнер."
+    ].join("\n")
+  );
+});
 
   bot.command("admin", async (ctx) => {
     return renderAdminPanel(ctx);

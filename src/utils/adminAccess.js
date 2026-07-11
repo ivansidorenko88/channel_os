@@ -1,8 +1,8 @@
-const { ADMIN_IDS } = require("../config/env");
+const { ADMIN_IDS, RAW_ADMIN_IDS } = require("../config/env");
 
 function normalizeTelegramId(value) {
   if (value === null || value === undefined) return "";
-  return String(value).trim();
+  return String(value).replace(/[^\d]/g, "").trim();
 }
 
 function isAdminTelegramId(telegramId) {
@@ -14,7 +14,19 @@ function isAdminContext(ctx) {
   return isAdminTelegramId(ctx?.from?.id);
 }
 
+function getAdminAccessDiagnostics(telegramId) {
+  const normalized = normalizeTelegramId(telegramId);
+
+  return {
+    telegramId: normalized,
+    configuredAdminCount: ADMIN_IDS.length,
+    environmentValuePresent: Boolean(String(RAW_ADMIN_IDS || "").trim()),
+    hasAccess: isAdminTelegramId(normalized)
+  };
+}
+
 module.exports = {
   isAdminTelegramId,
-  isAdminContext
+  isAdminContext,
+  getAdminAccessDiagnostics
 };
