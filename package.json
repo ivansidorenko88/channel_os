@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.3.1",
-  "description": "Channel OS v0.3.1 Dashboard Polish",
+  "version": "0.3.2",
+  "description": "Channel OS v0.3.2 Admin Statistics",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

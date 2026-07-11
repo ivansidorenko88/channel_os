@@ -12,6 +12,7 @@ const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
 const { registerMemberHandler } = require("./handlers/memberHandler");
 const { registerSettingsHandler } = require("./handlers/settingsHandler");
 const { registerDebugHandler } = require("./handlers/debugHandler");
+const { registerAdminHandler } = require("./handlers/adminHandler");
 const { startPublisherScheduler } = require("./scheduler/publisher");
 const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnapshots");
 const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreScheduler");
@@ -43,6 +44,7 @@ registerAnalyticsHandler(bot);
 registerMemberHandler(bot);
 registerSettingsHandler(bot);
 registerDebugHandler(bot);
+registerAdminHandler(bot);
 
 startPublisherScheduler(bot);
 startSubscriberSnapshotScheduler(bot);
@@ -57,7 +59,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.3.1 Dashboard Polish started");
+console.log("Channel OS v0.3.2 Admin Statistics started");
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
