@@ -1,11 +1,26 @@
-const { upsertUser } = require("../repositories/userRepository");
-const { upsertChannel, listChannels, findChannel } = require("../repositories/channelRepository");
+const {
+  upsertUser
+} = require("../repositories/userRepository");
+const {
+  upsertChannel,
+  listChannels,
+  getChannelManagementStats,
+  disconnectChannel
+} = require("../repositories/channelRepository");
 
 async function connectChannelFromForward(ctx) {
-  const forwardedChat = ctx.message && ctx.message.forward_from_chat;
+  const forwardedChat =
+    ctx.message && ctx.message.forward_from_chat;
 
-  if (!forwardedChat || forwardedChat.type !== "channel") {
-    return { ok: false, message: "❌ Нужно переслать сообщение именно из Telegram-канала." };
+  if (
+    !forwardedChat ||
+    forwardedChat.type !== "channel"
+  ) {
+    return {
+      ok: false,
+      message:
+        "❌ Нужно переслать сообщение именно из Telegram-канала."
+    };
   }
 
   const user = await upsertUser(ctx.from);
@@ -25,4 +40,27 @@ async function getUserChannels(from) {
   return listChannels(user.id);
 }
 
-module.exports = { connectChannelFromForward, getUserChannels };
+async function getManagedChannel(from, channelId) {
+  const user = await upsertUser(from);
+
+  return getChannelManagementStats(
+    user.id,
+    channelId
+  );
+}
+
+async function removeUserChannel(from, channelId) {
+  const user = await upsertUser(from);
+
+  return disconnectChannel(
+    user.id,
+    channelId
+  );
+}
+
+module.exports = {
+  connectChannelFromForward,
+  getUserChannels,
+  getManagedChannel,
+  removeUserChannel
+};

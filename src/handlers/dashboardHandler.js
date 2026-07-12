@@ -12,6 +12,8 @@ const {
   buildRefreshResultText
 } = require("../utils/dashboardFormatter");
 const { listUserDrafts } = require("../services/draftService");
+const { draftListKeyboard } = require("../keyboards/draftKeyboards");
+const { buildDraftListText } = require("../utils/draftFormatter");
 
 async function acknowledge(ctx, text) {
   if (!ctx.callbackQuery) return;
@@ -109,22 +111,11 @@ function registerDashboardHandler(bot) {
   bot.action("dashboard:drafts", async (ctx) => {
     await acknowledge(ctx);
 
-    const drafts = await listUserDrafts(ctx.from, 10);
-
-    if (!drafts.length) {
-      return ctx.reply(
-        "📄 Черновиков пока нет.",
-        dashboardBackKeyboard()
-      );
-    }
-
-    const text = drafts
-      .map((draft) => draftPreview(draft))
-      .join("\n\n");
+    const drafts = await listUserDrafts(ctx.from, 20);
 
     return ctx.reply(
-      `📄 Последние черновики\n\n${text}`,
-      dashboardBackKeyboard()
+      buildDraftListText(drafts),
+      draftListKeyboard(drafts)
     );
   });
 }

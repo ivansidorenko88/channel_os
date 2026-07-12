@@ -18,6 +18,7 @@ async function notifyFailure(bot, item, error) {
   const ownerTelegramId = item.channel?.owner?.telegramId;
 
   if (!ownerTelegramId) return;
+  if (item.channel?.owner?.notificationsEnabled === false) return;
 
   try {
     await bot.telegram.sendMessage(

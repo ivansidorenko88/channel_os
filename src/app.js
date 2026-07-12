@@ -63,7 +63,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.4.0 Content Plan started");
+console.log("Channel OS v0.4.1 Management & Settings started");
 console.log(`[Admin] Loaded administrator IDs: ${ADMIN_IDS.length}`);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));

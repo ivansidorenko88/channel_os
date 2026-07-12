@@ -110,7 +110,7 @@ async function scheduleDraft(from, draftId, scheduledAt) {
     category: draft.category,
     scheduledAt,
     recurrence: "none",
-    reminderMinutes: 30
+    reminderMinutes: user.defaultReminderMinutes
   });
 
   await deleteDraft({

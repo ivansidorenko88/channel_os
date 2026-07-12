@@ -1,0 +1,12 @@
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "defaultReminderMinutes" INTEGER NOT NULL DEFAULT 30,
+ADD COLUMN IF NOT EXISTS "notificationsEnabled" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN IF NOT EXISTS "confirmBeforePublish" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN IF NOT EXISTS "defaultCategory" TEXT;
+
+ALTER TABLE "Channel"
+ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN IF NOT EXISTS "disconnectedAt" TIMESTAMP(3);
+
+CREATE INDEX IF NOT EXISTS "Channel_ownerId_isActive_idx"
+ON "Channel"("ownerId", "isActive");

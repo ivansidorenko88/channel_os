@@ -17,4 +17,27 @@ async function upsertUser(from) {
   });
 }
 
-module.exports = { upsertUser };
+async function updateUserSettings(userId, data) {
+  return prisma.user.update({
+    where: { id: Number(userId) },
+    data
+  });
+}
+
+async function resetUserSettings(userId) {
+  return prisma.user.update({
+    where: { id: Number(userId) },
+    data: {
+      defaultReminderMinutes: 30,
+      notificationsEnabled: true,
+      confirmBeforePublish: true,
+      defaultCategory: null
+    }
+  });
+}
+
+module.exports = {
+  upsertUser,
+  updateUserSettings,
+  resetUserSettings
+};

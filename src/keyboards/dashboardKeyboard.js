@@ -11,7 +11,7 @@ function dashboardKeyboard() {
           { text: "📅 Контент-план", callback_data: "contentplan:main" }
         ],
         [
-          { text: "📄 Черновики", callback_data: "dashboard:drafts" },
+          { text: "📄 Черновики", callback_data: "draft:list" },
           { text: "👥 События", callback_data: "analytics:subscribers" }
         ],
         [

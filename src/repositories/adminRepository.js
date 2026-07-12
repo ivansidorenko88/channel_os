@@ -32,9 +32,9 @@ async function getAdminStatistics() {
       where: { createdAt: { gte: sinceDays(30) } }
     }),
     prisma.user.count({
-      where: { channels: { some: {} } }
+      where: { channels: { some: { isActive: true } } }
     }),
-    prisma.channel.count(),
+    prisma.channel.count({ where: { isActive: true } }),
     prisma.post.count(),
     prisma.draft.count(),
     prisma.scheduledPost.count({

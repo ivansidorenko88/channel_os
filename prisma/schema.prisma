@@ -14,7 +14,11 @@ model User {
   firstName   String?
   lastName    String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt                 DateTime @updatedAt
+  defaultReminderMinutes    Int      @default(30)
+  notificationsEnabled      Boolean  @default(true)
+  confirmBeforePublish      Boolean  @default(true)
+  defaultCategory           String?
 
   channels         Channel[]
   drafts           Draft[]
@@ -28,7 +32,9 @@ model Channel {
   title       String
   username    String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
+  isActive      Boolean   @default(true)
+  disconnectedAt DateTime?
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   drafts Draft[]
@@ -39,6 +45,7 @@ model Channel {
   analyticsSnapshots  AnalyticsSnapshot[]
 
   @@unique([ownerId, telegramId])
+  @@index([ownerId, isActive])
 }
 
 model Draft {

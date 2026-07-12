@@ -2,7 +2,7 @@ const prisma = require("../config/prisma");
 
 async function ownerChannelIds(ownerId) {
   const channels = await prisma.channel.findMany({
-    where: { ownerId },
+    where: { ownerId, isActive: true },
     select: { id: true }
   });
 
@@ -86,6 +86,7 @@ async function findDuePosts() {
   return prisma.scheduledPost.findMany({
     where: {
       status: "pending",
+      channel: { isActive: true },
       scheduledAt: { lte: new Date() }
     },
     include: {
@@ -107,6 +108,7 @@ async function findUpcomingReminderCandidates(maxMinutes = 60) {
   return prisma.scheduledPost.findMany({
     where: {
       status: "pending",
+      channel: { isActive: true },
       reminderSentAt: null,
       reminderMinutes: { gt: 0 },
       scheduledAt: {

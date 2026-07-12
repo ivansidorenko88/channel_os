@@ -23,6 +23,10 @@ async function sendReminder(bot, item) {
   const ownerTelegramId = item.channel?.owner?.telegramId;
 
   if (!ownerTelegramId) return false;
+  if (item.channel?.owner?.notificationsEnabled === false) {
+    await markReminderSent(item.id);
+    return false;
+  }
 
   await bot.telegram.sendMessage(
     ownerTelegramId,

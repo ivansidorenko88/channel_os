@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.4.0",
-  "description": "Channel OS v0.4 Content Plan",
+  "version": "0.4.1",
+  "description": "Channel OS v0.4.1 Drafts, Channels and Settings",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
