@@ -1,42 +1,258 @@
 const prisma = require("../config/prisma");
 
+async function ownerChannelIds(ownerId) {
+  const channels = await prisma.channel.findMany({
+    where: { ownerId },
+    select: { id: true }
+  });
+
+  return channels.map((channel) => channel.id);
+}
+
 async function createScheduledPost(data) {
   return prisma.scheduledPost.create({ data });
 }
 
-async function listPendingByOwner(ownerId) {
-  const channels = await prisma.channel.findMany({ where: { ownerId }, select: { id: true } });
-  const channelIds = channels.map((channel) => channel.id);
+async function listPendingByOwner(ownerId, take = 20) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return [];
 
   return prisma.scheduledPost.findMany({
-    where: { channelId: { in: channelIds }, status: "pending" },
+    where: {
+      channelId: { in: channelIds },
+      status: "pending"
+    },
     include: { channel: true },
     orderBy: { scheduledAt: "asc" },
-    take: 20
+    take
+  });
+}
+
+async function listByOwnerRange(ownerId, from, to, take = 50) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return [];
+
+  return prisma.scheduledPost.findMany({
+    where: {
+      channelId: { in: channelIds },
+      status: "pending",
+      scheduledAt: {
+        gte: from,
+        lt: to
+      }
+    },
+    include: { channel: true },
+    orderBy: { scheduledAt: "asc" },
+    take
+  });
+}
+
+async function findScheduledForOwner(ownerId, scheduledId) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return null;
+
+  return prisma.scheduledPost.findFirst({
+    where: {
+      id: Number(scheduledId),
+      channelId: { in: channelIds }
+    },
+    include: { channel: true }
+  });
+}
+
+async function updateScheduledForOwner(ownerId, scheduledId, data) {
+  const item = await findScheduledForOwner(ownerId, scheduledId);
+
+  if (!item) return null;
+
+  await prisma.scheduledPost.update({
+    where: { id: item.id },
+    data
+  });
+
+  return findScheduledForOwner(ownerId, scheduledId);
+}
+
+async function cancelScheduledForOwner(ownerId, scheduledId) {
+  return updateScheduledForOwner(ownerId, scheduledId, {
+    status: "cancelled"
   });
 }
 
 async function findDuePosts() {
   return prisma.scheduledPost.findMany({
-    where: { status: "pending", scheduledAt: { lte: new Date() } },
-    include: { channel: true },
+    where: {
+      status: "pending",
+      scheduledAt: { lte: new Date() }
+    },
+    include: {
+      channel: {
+        include: { owner: true }
+      }
+    },
     orderBy: { scheduledAt: "asc" },
     take: 10
   });
 }
 
-async function markPublished(id) {
-  return prisma.scheduledPost.update({ where: { id }, data: { status: "published", publishedAt: new Date() } });
+async function findUpcomingReminderCandidates(maxMinutes = 60) {
+  const now = new Date();
+  const until = new Date(
+    now.getTime() + maxMinutes * 60 * 1000
+  );
+
+  return prisma.scheduledPost.findMany({
+    where: {
+      status: "pending",
+      reminderSentAt: null,
+      reminderMinutes: { gt: 0 },
+      scheduledAt: {
+        gt: now,
+        lte: until
+      }
+    },
+    include: {
+      channel: {
+        include: { owner: true }
+      }
+    },
+    orderBy: { scheduledAt: "asc" },
+    take: 50
+  });
 }
 
-async function markFailed(id) {
-  return prisma.scheduledPost.update({ where: { id }, data: { status: "failed" } });
+async function markReminderSent(id) {
+  return prisma.scheduledPost.update({
+    where: { id: Number(id) },
+    data: { reminderSentAt: new Date() }
+  });
+}
+
+async function markFailed(id, failureReason = null) {
+  return prisma.scheduledPost.update({
+    where: { id: Number(id) },
+    data: {
+      status: "failed",
+      failureReason: failureReason
+        ? String(failureReason).slice(0, 1000)
+        : null
+    }
+  });
+}
+
+async function completeScheduledPublication({
+  item,
+  telegramMessageId,
+  nextScheduledAt
+}) {
+  return prisma.$transaction(async (tx) => {
+    const post = await tx.post.create({
+      data: {
+        channelId: item.channel.id,
+        telegramMessageId,
+        type: item.type,
+        text: item.text,
+        fileId: item.fileId,
+        caption: item.caption,
+        category: item.category,
+        status: "published",
+        publishedAt: new Date()
+      }
+    });
+
+    await tx.scheduledPost.update({
+      where: { id: item.id },
+      data: {
+        status: "published",
+        publishedAt: new Date(),
+        failureReason: null
+      }
+    });
+
+    let next = null;
+
+    if (nextScheduledAt) {
+      next = await tx.scheduledPost.create({
+        data: {
+          channelId: item.channel.id,
+          type: item.type,
+          text: item.text,
+          fileId: item.fileId,
+          caption: item.caption,
+          category: item.category,
+          status: "pending",
+          scheduledAt: nextScheduledAt,
+          recurrence: item.recurrence,
+          recurrenceUntil: item.recurrenceUntil,
+          reminderMinutes: item.reminderMinutes
+        }
+      });
+    }
+
+    return { post, next };
+  });
 }
 
 async function countPendingByOwner(ownerId) {
-  const channels = await prisma.channel.findMany({ where: { ownerId }, select: { id: true } });
-  const channelIds = channels.map((channel) => channel.id);
-  return prisma.scheduledPost.count({ where: { channelId: { in: channelIds }, status: "pending" } });
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return 0;
+
+  return prisma.scheduledPost.count({
+    where: {
+      channelId: { in: channelIds },
+      status: "pending"
+    }
+  });
 }
 
-module.exports = { createScheduledPost, listPendingByOwner, findDuePosts, markPublished, markFailed, countPendingByOwner };
+async function countRecurringByOwner(ownerId) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return 0;
+
+  return prisma.scheduledPost.count({
+    where: {
+      channelId: { in: channelIds },
+      status: "pending",
+      recurrence: { not: "none" }
+    }
+  });
+}
+
+async function countByOwnerRange(ownerId, from, to) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return 0;
+
+  return prisma.scheduledPost.count({
+    where: {
+      channelId: { in: channelIds },
+      status: "pending",
+      scheduledAt: {
+        gte: from,
+        lt: to
+      }
+    }
+  });
+}
+
+module.exports = {
+  createScheduledPost,
+  listPendingByOwner,
+  listByOwnerRange,
+  findScheduledForOwner,
+  updateScheduledForOwner,
+  cancelScheduledForOwner,
+  findDuePosts,
+  findUpcomingReminderCandidates,
+  markReminderSent,
+  markFailed,
+  completeScheduledPublication,
+  countPendingByOwner,
+  countRecurringByOwner,
+  countByOwnerRange
+};

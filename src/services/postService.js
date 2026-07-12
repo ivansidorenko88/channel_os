@@ -20,7 +20,8 @@ async function publishDraft(ctx, draftId) {
     type: draft.type,
     text: draft.text,
     fileId: draft.fileId,
-    caption: draft.caption
+    caption: draft.caption,
+    category: draft.category
   });
 
   await deleteDraft({ userId: user.id, draftId: draft.id });

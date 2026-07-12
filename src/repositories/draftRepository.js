@@ -16,6 +16,18 @@ async function setDraftChannel({ userId, draftId, channelId }) {
   });
 }
 
+async function updateDraftCategory({ userId, draftId, category }) {
+  await prisma.draft.updateMany({
+    where: { id: Number(draftId), userId },
+    data: { category: category || null }
+  });
+
+  return prisma.draft.findFirst({
+    where: { id: Number(draftId), userId },
+    include: { channel: true }
+  });
+}
+
 async function findDraft({ userId, draftId }) {
   return prisma.draft.findFirst({
     where: { id: Number(draftId), userId },
@@ -24,7 +36,9 @@ async function findDraft({ userId, draftId }) {
 }
 
 async function deleteDraft({ userId, draftId }) {
-  return prisma.draft.deleteMany({ where: { id: Number(draftId), userId } });
+  return prisma.draft.deleteMany({
+    where: { id: Number(draftId), userId }
+  });
 }
 
 async function listDrafts(userId, take = 10) {
@@ -40,4 +54,12 @@ async function countDrafts(userId) {
   return prisma.draft.count({ where: { userId } });
 }
 
-module.exports = { createDraft, setDraftChannel, findDraft, deleteDraft, listDrafts, countDrafts };
+module.exports = {
+  createDraft,
+  setDraftChannel,
+  updateDraftCategory,
+  findDraft,
+  deleteDraft,
+  listDrafts,
+  countDrafts
+};

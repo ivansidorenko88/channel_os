@@ -8,7 +8,7 @@ function dashboardKeyboard() {
         ],
         [
           { text: "✍️ Создать пост", callback_data: "draft:create" },
-          { text: "📅 Публикации", callback_data: "schedule:list" }
+          { text: "📅 Контент-план", callback_data: "contentplan:main" }
         ],
         [
           { text: "📄 Черновики", callback_data: "dashboard:drafts" },

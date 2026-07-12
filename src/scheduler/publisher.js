@@ -1,36 +1,116 @@
-const { findDuePosts, markPublished, markFailed } = require("../repositories/scheduledPostRepository");
-const { createPublishedPost } = require("../repositories/postRepository");
-const { sendContent } = require("../services/telegramPublishService");
+const {
+  findDuePosts,
+  markFailed,
+  completeScheduledPublication
+} = require("../repositories/scheduledPostRepository");
+const {
+  getNextOccurrence,
+  isNextOccurrenceAllowed
+} = require("../services/scheduleService");
+const {
+  sendContent
+} = require("../services/telegramPublishService");
+const {
+  formatDateTime
+} = require("../utils/contentPlanFormatter");
 
-function startPublisherScheduler(bot) {
-  setInterval(async () => {
-    try {
-      const duePosts = await findDuePosts();
+async function notifyFailure(bot, item, error) {
+  const ownerTelegramId = item.channel?.owner?.telegramId;
 
-      for (const item of duePosts) {
-        try {
-          const sent = await sendContent(bot.telegram, item.channel.telegramId, item);
+  if (!ownerTelegramId) return;
 
-          await createPublishedPost({
-            channelId: item.channel.id,
-            telegramMessageId: sent.message_id,
-            type: item.type,
-            text: item.text,
-            fileId: item.fileId,
-            caption: item.caption
-          });
-
-          await markPublished(item.id);
-          console.log(`Scheduled post ${item.id} published`);
-        } catch (error) {
-          console.error(`Scheduled post ${item.id} failed:`, error);
-          await markFailed(item.id);
-        }
-      }
-    } catch (error) {
-      console.error("Publisher scheduler loop error:", error);
-    }
-  }, 30000);
+  try {
+    await bot.telegram.sendMessage(
+      ownerTelegramId,
+      [
+        "❌ Не удалось опубликовать пост",
+        "",
+        `📢 Канал: ${item.channel.title}`,
+        `🕒 Время: ${formatDateTime(item.scheduledAt)}`,
+        "",
+        "Проверь права бота в канале.",
+        "",
+        `Ошибка: ${String(error.message || error).slice(0, 500)}`
+      ].join("\n")
+    );
+  } catch (notifyError) {
+    console.error(
+      `Failed to notify owner about scheduled post ${item.id}:`,
+      notifyError.message
+    );
+  }
 }
 
-module.exports = { startPublisherScheduler };
+async function processDuePosts(bot) {
+  const duePosts = await findDuePosts();
+
+  for (const item of duePosts) {
+    try {
+      const sent = await sendContent(
+        bot.telegram,
+        item.channel.telegramId,
+        item
+      );
+
+      const candidate = getNextOccurrence(
+        item.scheduledAt,
+        item.recurrence
+      );
+
+      const nextScheduledAt = isNextOccurrenceAllowed(
+        item,
+        candidate
+      )
+        ? candidate
+        : null;
+
+      await completeScheduledPublication({
+        item,
+        telegramMessageId: sent.message_id,
+        nextScheduledAt
+      });
+
+      console.log(
+        `Scheduled post ${item.id} published` +
+          (nextScheduledAt
+            ? `; next occurrence: ${nextScheduledAt.toISOString()}`
+            : "")
+      );
+    } catch (error) {
+      console.error(
+        `Scheduled post ${item.id} failed:`,
+        error
+      );
+
+      await markFailed(item.id, error.message);
+      await notifyFailure(bot, item, error);
+    }
+  }
+}
+
+function startPublisherScheduler(bot) {
+  let running = false;
+
+  setInterval(async () => {
+    if (running) return;
+    running = true;
+
+    try {
+      await processDuePosts(bot);
+    } catch (error) {
+      console.error(
+        "Publisher scheduler loop error:",
+        error
+      );
+    } finally {
+      running = false;
+    }
+  }, 30000);
+
+  console.log("[ContentPlan] Publisher scheduler started.");
+}
+
+module.exports = {
+  startPublisherScheduler,
+  processDuePosts
+};

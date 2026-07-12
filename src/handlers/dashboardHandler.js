@@ -64,7 +64,9 @@ function draftPreview(draft) {
   const compact = String(content).replace(/\s+/g, " ").slice(0, 80);
   const channel = draft.channel?.title || "канал не выбран";
 
-  return `#${draft.id} · ${channel}\n${compact}`;
+  const category = draft.category ? ` · 🏷 ${draft.category}` : "";
+
+  return `#${draft.id} · ${channel}${category}\n${compact}`;
 }
 
 function registerDashboardHandler(bot) {

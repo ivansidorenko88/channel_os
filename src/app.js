@@ -7,6 +7,7 @@ const { registerStartHandler } = require("./handlers/startHandler");
 const { registerDashboardHandler } = require("./handlers/dashboardHandler");
 const { registerChannelHandler } = require("./handlers/channelHandler");
 const { registerDraftHandler } = require("./handlers/draftHandler");
+const { registerContentPlanHandler } = require("./handlers/contentPlanHandler");
 const { registerScheduleHandler } = require("./handlers/scheduleHandler");
 const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
 const { registerMemberHandler } = require("./handlers/memberHandler");
@@ -14,6 +15,7 @@ const { registerSettingsHandler } = require("./handlers/settingsHandler");
 const { registerDebugHandler } = require("./handlers/debugHandler");
 const { registerAdminHandler } = require("./handlers/adminHandler");
 const { startPublisherScheduler } = require("./scheduler/publisher");
+const { startContentReminderScheduler } = require("./scheduler/contentReminderScheduler");
 const { startSubscriberSnapshotScheduler } = require("./scheduler/subscriberSnapshots");
 const { startAnalyticsCoreScheduler } = require("./scheduler/analyticsCoreScheduler");
 
@@ -38,6 +40,7 @@ bot.catch((error, ctx) => {
 registerDashboardHandler(bot);
 registerStartHandler(bot);
 registerChannelHandler(bot);
+registerContentPlanHandler(bot);
 registerDraftHandler(bot);
 registerScheduleHandler(bot);
 registerAnalyticsHandler(bot);
@@ -47,6 +50,7 @@ registerDebugHandler(bot);
 registerAdminHandler(bot);
 
 startPublisherScheduler(bot);
+startContentReminderScheduler(bot);
 startSubscriberSnapshotScheduler(bot);
 startAnalyticsCoreScheduler(bot);
 
@@ -59,7 +63,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.3.2.1 Admin Access Fix started");
+console.log("Channel OS v0.4.0 Content Plan started");
 console.log(`[Admin] Loaded administrator IDs: ${ADMIN_IDS.length}`);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));

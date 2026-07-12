@@ -1,7 +1,7 @@
 {
   "name": "channel-os",
-  "version": "0.3.2-1",
-  "description": "Channel OS v0.3.2.1 Admin Access Fix",
+  "version": "0.4.0",
+  "description": "Channel OS v0.4 Content Plan",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
