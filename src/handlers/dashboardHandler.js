@@ -11,7 +11,7 @@ const {
   buildDashboardText,
   buildRefreshResultText
 } = require("../utils/dashboardFormatter");
-const { listUserDrafts } = require("../services/draftService");
+const { listUserDraftsPage } = require("../services/draftService");
 const { draftListKeyboard } = require("../keyboards/draftKeyboards");
 const { buildDraftListText } = require("../utils/draftFormatter");
 
@@ -111,11 +111,14 @@ function registerDashboardHandler(bot) {
   bot.action("dashboard:drafts", async (ctx) => {
     await acknowledge(ctx);
 
-    const drafts = await listUserDrafts(ctx.from, 20);
+    const result = await listUserDraftsPage(ctx.from, {
+      page: 0,
+      pageSize: 6
+    });
 
     return ctx.reply(
-      buildDraftListText(drafts),
-      draftListKeyboard(drafts)
+      buildDraftListText(result),
+      draftListKeyboard(result)
     );
   });
 }

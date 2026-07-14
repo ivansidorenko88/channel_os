@@ -24,6 +24,12 @@ function contentPlanKeyboard() {
         ],
         [
           {
+            text: "❌ Ошибки публикации",
+            callback_data: "contentplan:list:failed"
+          }
+        ],
+        [
+          {
             text: "✍️ Создать пост",
             callback_data: "draft:create"
           },
@@ -50,7 +56,7 @@ function contentPlanKeyboard() {
 function contentPlanListKeyboard(items, range = "all") {
   const rows = items.slice(0, 20).map((item) => [
     {
-      text: `${item.channel.title} · ${formatButtonDate(item.scheduledAt)}`,
+      text: `${statusIcon(item.status)} ${item.channel.title} · ${formatButtonDate(item.scheduledAt)}`,
       callback_data: `contentplan:item:${item.id}`
     }
   ]);
@@ -70,46 +76,87 @@ function contentPlanListKeyboard(items, range = "all") {
 }
 
 function scheduledItemKeyboard(item) {
+  const rows = [];
+
+  if (item.status === "pending") {
+    rows.push([
+      {
+        text: "🚀 Опубликовать сейчас",
+        callback_data: `contentplan:publish_now:${item.id}`
+      }
+    ]);
+
+    rows.push([
+      {
+        text: "🕒 Перенести",
+        callback_data: `contentplan:reschedule:${item.id}`
+      },
+      {
+        text: "✏️ Изменить",
+        callback_data: `contentplan:edit:${item.id}`
+      }
+    ]);
+
+    rows.push([
+      {
+        text: "🔁 Повтор",
+        callback_data: `contentplan:repeat:${item.id}`
+      },
+      {
+        text: "🔔 Напоминание",
+        callback_data: `contentplan:reminder:${item.id}`
+      }
+    ]);
+
+    rows.push([
+      {
+        text: "🏷 Рубрика",
+        callback_data: `contentplan:category:${item.id}`
+      },
+      {
+        text: "🗑 Отменить",
+        callback_data: `contentplan:cancel_confirm:${item.id}`
+      }
+    ]);
+  }
+
+  if (item.status === "failed") {
+    rows.push([
+      {
+        text: "🔄 Повторить отправку",
+        callback_data: `contentplan:retry:${item.id}`
+      }
+    ]);
+
+    rows.push([
+      {
+        text: "🕒 Перенести",
+        callback_data: `contentplan:reschedule:${item.id}`
+      },
+      {
+        text: "✏️ Изменить",
+        callback_data: `contentplan:edit:${item.id}`
+      }
+    ]);
+
+    rows.push([
+      {
+        text: "🗑 Отменить",
+        callback_data: `contentplan:cancel_confirm:${item.id}`
+      }
+    ]);
+  }
+
+  rows.push([
+    {
+      text: "◀️ Контент-план",
+      callback_data: "contentplan:main"
+    }
+  ]);
+
   return {
     reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "🕒 Перенести",
-            callback_data: `contentplan:reschedule:${item.id}`
-          },
-          {
-            text: "✏️ Изменить",
-            callback_data: `contentplan:edit:${item.id}`
-          }
-        ],
-        [
-          {
-            text: "🔁 Повтор",
-            callback_data: `contentplan:repeat:${item.id}`
-          },
-          {
-            text: "🔔 Напоминание",
-            callback_data: `contentplan:reminder:${item.id}`
-          }
-        ],
-        [
-          {
-            text: "🏷 Рубрика",
-            callback_data: `contentplan:category:${item.id}`
-          },
-          {
-            text: "🗑 Отменить",
-            callback_data: `contentplan:cancel_confirm:${item.id}`
-          }
-        ],
-        [
-          {
-            text: "◀️ Контент-план",
-            callback_data: "contentplan:main"
-          }
-        ]
-      ]
+      inline_keyboard: rows
     }
   };
 }
@@ -265,6 +312,19 @@ function formatButtonDate(date) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function statusIcon(status) {
+  const icons = {
+    pending: "⏳",
+    processing: "🔄",
+    published: "✅",
+    failed: "❌",
+    uncertain: "⚠️",
+    cancelled: "🚫"
+  };
+
+  return icons[status] || "•";
 }
 
 module.exports = {

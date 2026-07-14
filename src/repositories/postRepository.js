@@ -10,6 +10,33 @@ async function createPublishedPost(data) {
   });
 }
 
+
+async function completeDraftPublication({
+  userId,
+  draftId,
+  postData
+}) {
+  return prisma.$transaction(async (tx) => {
+    const post = await tx.post.create({
+      data: {
+        ...postData,
+        status: "published",
+        publishedAt: new Date()
+      }
+    });
+
+    await tx.draft.deleteMany({
+      where: {
+        id: Number(draftId),
+        userId: Number(userId),
+        status: "publishing"
+      }
+    });
+
+    return post;
+  });
+}
+
 async function countPostsByOwner(ownerId) {
   const channels = await prisma.channel.findMany({ where: { ownerId }, select: { id: true } });
   const channelIds = channels.map((channel) => channel.id);
@@ -43,4 +70,11 @@ async function lastPostByChannel(channelId) {
   });
 }
 
-module.exports = { createPublishedPost, countPostsByOwner, countPostsByOwnerSince, countPostsByChannel, lastPostByChannel };
+module.exports = {
+  createPublishedPost,
+  completeDraftPublication,
+  countPostsByOwner,
+  countPostsByOwnerSince,
+  countPostsByChannel,
+  lastPostByChannel
+};

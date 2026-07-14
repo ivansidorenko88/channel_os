@@ -25,6 +25,8 @@ const {
   setScheduledRecurrence,
   setScheduledReminder,
   setScheduledCategory,
+  queueScheduledNow,
+  retryScheduledForUser,
   cancelScheduledForUser
 } = require("../services/scheduleService");
 const {
@@ -44,6 +46,9 @@ const {
   buildScheduledItemText,
   buildTemplateText
 } = require("../utils/contentPlanFormatter");
+const {
+  processScheduledPostNow
+} = require("../scheduler/publisher");
 
 function isEditFallbackError(error) {
   const description =
@@ -146,7 +151,7 @@ function registerContentPlanHandler(bot) {
   });
 
   bot.action(
-    /^contentplan:list:(today|week|all|recurring)$/,
+    /^contentplan:list:(today|week|all|recurring|failed)$/,
     async (ctx) => {
       await ctx.answerCbQuery();
 
@@ -166,7 +171,8 @@ function registerContentPlanHandler(bot) {
         today: "📍 Публикации на сегодня",
         week: "🗓 Публикации на 7 дней",
         all: "📚 Вся очередь публикаций",
-        recurring: "🔁 Повторяющиеся публикации"
+        recurring: "🔁 Повторяющиеся публикации",
+        failed: "❌ Ошибки публикации"
       };
 
       return showScreen(
@@ -181,6 +187,73 @@ function registerContentPlanHandler(bot) {
     await ctx.answerCbQuery();
     return renderItem(ctx, Number(ctx.match[1]));
   });
+
+bot.action(
+  /^contentplan:publish_now:(\d+)$/,
+  async (ctx) => {
+    await ctx.answerCbQuery("Публикую...");
+
+    const queued = await queueScheduledNow(
+      ctx.from,
+      Number(ctx.match[1])
+    );
+
+    if (!queued) {
+      return ctx.reply("❌ Публикация не найдена.");
+    }
+
+    const result = await processScheduledPostNow(
+      ctx.telegram,
+      queued.id
+    );
+
+    if (!result.ok) {
+      return ctx.reply(
+        result.reason ||
+        "❌ Публикация завершилась ошибкой. Открой раздел «Ошибки публикации»."
+      );
+    }
+
+    return ctx.reply(
+      `✅ Пост опубликован в канале «${result.item.channel.title}».`,
+      contentPlanKeyboard()
+    );
+  }
+);
+
+bot.action(
+  /^contentplan:retry:(\d+)$/,
+  async (ctx) => {
+    await ctx.answerCbQuery("Повторяю отправку...");
+
+    const queued = await retryScheduledForUser(
+      ctx.from,
+      Number(ctx.match[1])
+    );
+
+    if (!queued) {
+      return ctx.reply(
+        "❌ Не удалось повторить: публикация не найдена или больше не находится в статусе ошибки."
+      );
+    }
+
+    const result = await processScheduledPostNow(
+      ctx.telegram,
+      queued.id
+    );
+
+    if (!result.ok) {
+      return ctx.reply(
+        "❌ Повторная отправка не удалась. Причина сохранена в карточке публикации."
+      );
+    }
+
+    return ctx.reply(
+      `✅ Повторная отправка выполнена: ${result.item.channel.title}.`,
+      contentPlanKeyboard()
+    );
+  }
+);
 
   bot.action(
     /^contentplan:reschedule:(\d+)$/,

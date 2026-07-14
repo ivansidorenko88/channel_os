@@ -24,6 +24,13 @@ async function updateUserSettings(userId, data) {
   });
 }
 
+async function markOnboardingCompleted(userId, completed = true) {
+  return prisma.user.update({
+    where: { id: Number(userId) },
+    data: { onboardingCompleted: Boolean(completed) }
+  });
+}
+
 async function resetUserSettings(userId) {
   return prisma.user.update({
     where: { id: Number(userId) },
@@ -31,7 +38,9 @@ async function resetUserSettings(userId) {
       defaultReminderMinutes: 30,
       notificationsEnabled: true,
       confirmBeforePublish: true,
-      defaultCategory: null
+      defaultCategory: null,
+      notifyOnSuccess: false,
+      notifyOnFailure: true
     }
   });
 }
@@ -39,5 +48,6 @@ async function resetUserSettings(userId) {
 module.exports = {
   upsertUser,
   updateUserSettings,
+  markOnboardingCompleted,
   resetUserSettings
 };

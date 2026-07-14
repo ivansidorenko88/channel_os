@@ -11,6 +11,7 @@ const {
   connectChannelFromForward,
   getUserChannels,
   getManagedChannel,
+  checkManagedChannelPermissions,
   removeUserChannel
 } = require("../services/channelService");
 const {
@@ -21,6 +22,12 @@ const {
 const {
   buildChannelCard
 } = require("../utils/channelFormatter");
+const {
+  buildPermissionCheckText
+} = require("../services/channelPermissionService");
+const {
+  onboardingAfterChannelKeyboard
+} = require("../keyboards/onboardingKeyboard");
 
 function isEditFallbackError(error) {
   const description =
@@ -134,6 +141,47 @@ function registerChannelHandler(bot) {
     }
   );
 
+
+bot.action(
+  /^channels:check:(\d+)$/,
+  async (ctx) => {
+    await ctx.answerCbQuery("Проверяю права...");
+
+    try {
+      const checked =
+        await checkManagedChannelPermissions(
+          ctx.telegram,
+          ctx.from,
+          Number(ctx.match[1])
+        );
+
+      if (!checked) {
+        return renderChannels(ctx);
+      }
+
+      return ctx.reply(
+        [
+          `📢 ${checked.channel.title}`,
+          "",
+          buildPermissionCheckText(checked.result)
+        ].join("\n"),
+        channelActionsKeyboard(checked.channel.id)
+      );
+    } catch (error) {
+      console.error("Channel permissions check failed:", error);
+
+      return ctx.reply(
+        [
+          "❌ Не удалось проверить права.",
+          "",
+          "Убедись, что бот всё ещё добавлен в канал.",
+          `Ошибка: ${String(error.message || error).slice(0, 300)}`
+        ].join("\n")
+      );
+    }
+  }
+);
+
   bot.action(
     /^channels:delete_confirm:(\d+)$/,
     async (ctx) => {
@@ -223,15 +271,20 @@ function registerChannelHandler(bot) {
 
     clearState(ctx.from.id);
 
+    const permissionsText = result.permissions?.ok
+      ? "✅ Права на публикацию подтверждены."
+      : "⚠️ Канал подключён, но права на публикацию нужно проверить.";
+
     return ctx.reply(
       [
         "✅ Канал подключён",
         "",
         `📢 ${result.channel.title}`,
+        permissionsText,
         "",
-        "Он уже доступен в Dashboard, аналитике и контент-плане."
+        "Следующий шаг — создай первый пост."
       ].join("\n"),
-      channelActionsKeyboard(result.channel.id)
+      onboardingAfterChannelKeyboard(result.channel.id)
     );
   });
 }

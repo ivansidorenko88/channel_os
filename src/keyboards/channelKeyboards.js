@@ -33,16 +33,20 @@ function channelActionsKeyboard(channelId) {
       inline_keyboard: [
         [
           {
+            text: "🔍 Проверить права",
+            callback_data: `channels:check:${channelId}`
+          }
+        ],
+        [
+          {
             text: "📊 Аналитика",
-            callback_data:
-              `analytics:channel:${channelId}`
+            callback_data: `analytics:channel:${channelId}`
           }
         ],
         [
           {
             text: "🗑 Удалить из Channel OS",
-            callback_data:
-              `channels:delete_confirm:${channelId}`
+            callback_data: `channels:delete_confirm:${channelId}`
           }
         ],
         [
@@ -63,8 +67,7 @@ function channelDeleteConfirmKeyboard(channelId) {
         [
           {
             text: "🗑 Да, отключить",
-            callback_data:
-              `channels:disconnect:${channelId}`
+            callback_data: `channels:disconnect:${channelId}`
           }
         ],
         [

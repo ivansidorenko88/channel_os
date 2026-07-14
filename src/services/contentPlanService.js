@@ -14,6 +14,7 @@ async function getContentPlanSummary(from) {
     todayCount,
     weekCount,
     pendingCount,
+    failedCount,
     recurringCount,
     draftCount,
     templateCount,
@@ -30,6 +31,7 @@ async function getContentPlanSummary(from) {
       weekEnd
     ),
     scheduledRepository.countPendingByOwner(user.id),
+    scheduledRepository.countFailedByOwner(user.id),
     scheduledRepository.countRecurringByOwner(user.id),
     countDrafts(user.id),
     countTemplates(user.id),
@@ -41,6 +43,7 @@ async function getContentPlanSummary(from) {
     todayCount,
     weekCount,
     pendingCount,
+    failedCount,
     recurringCount,
     draftCount,
     templateCount,
@@ -65,6 +68,13 @@ async function listContentPlan(from, range = "all") {
       user.id,
       todayStart,
       addDays(todayStart, 7)
+    );
+  }
+
+  if (range === "failed") {
+    return scheduledRepository.listFailedByOwner(
+      user.id,
+      30
     );
   }
 

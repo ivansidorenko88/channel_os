@@ -29,6 +29,22 @@ async function listPendingByOwner(ownerId, take = 20) {
   });
 }
 
+async function listFailedByOwner(ownerId, take = 30) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return [];
+
+  return prisma.scheduledPost.findMany({
+    where: {
+      channelId: { in: channelIds },
+      status: { in: ["failed", "uncertain"] }
+    },
+    include: { channel: true },
+    orderBy: { updatedAt: "desc" },
+    take
+  });
+}
+
 async function listByOwnerRange(ownerId, from, to, take = 50) {
   const channelIds = await ownerChannelIds(ownerId);
 
@@ -78,24 +94,98 @@ async function updateScheduledForOwner(ownerId, scheduledId, data) {
 
 async function cancelScheduledForOwner(ownerId, scheduledId) {
   return updateScheduledForOwner(ownerId, scheduledId, {
-    status: "cancelled"
+    status: "cancelled",
+    processingStartedAt: null
   });
 }
 
-async function findDuePosts() {
+async function queuePublishNow(ownerId, scheduledId) {
+  const item = await findScheduledForOwner(ownerId, scheduledId);
+
+  if (!item) return null;
+
+  if (!["pending", "failed"].includes(item.status)) {
+    return item;
+  }
+
+  return prisma.scheduledPost.update({
+    where: { id: item.id },
+    data: {
+      status: "pending",
+      scheduledAt: new Date(),
+      reminderSentAt: null,
+      failureReason: null,
+      processingStartedAt: null
+    },
+    include: { channel: true }
+  });
+}
+
+async function retryFailedForOwner(ownerId, scheduledId) {
+  const item = await findScheduledForOwner(ownerId, scheduledId);
+
+  if (!item || item.status !== "failed") return null;
+
+  return queuePublishNow(ownerId, scheduledId);
+}
+
+async function findDuePostIds() {
   return prisma.scheduledPost.findMany({
     where: {
       status: "pending",
       channel: { isActive: true },
       scheduledAt: { lte: new Date() }
     },
+    select: { id: true },
+    orderBy: { scheduledAt: "asc" },
+    take: 10
+  });
+}
+
+async function claimScheduledPost(id) {
+  const now = new Date();
+
+  const claimed = await prisma.scheduledPost.updateMany({
+    where: {
+      id: Number(id),
+      status: "pending"
+    },
+    data: {
+      status: "processing",
+      processingStartedAt: now,
+      lastAttemptAt: now,
+      attemptCount: { increment: 1 }
+    }
+  });
+
+  if (!claimed.count) return null;
+
+  return prisma.scheduledPost.findUnique({
+    where: { id: Number(id) },
     include: {
       channel: {
         include: { owner: true }
       }
+    }
+  });
+}
+
+async function recoverStuckProcessing(minutes = 10) {
+  const cutoff = new Date(
+    Date.now() - Number(minutes) * 60 * 1000
+  );
+
+  return prisma.scheduledPost.updateMany({
+    where: {
+      status: "processing",
+      processingStartedAt: { lt: cutoff }
     },
-    orderBy: { scheduledAt: "asc" },
-    take: 10
+    data: {
+      status: "uncertain",
+      processingStartedAt: null,
+      failureReason:
+        "Процесс публикации был прерван. Проверь канал вручную перед повторной отправкой."
+    }
   });
 }
 
@@ -138,9 +228,24 @@ async function markFailed(id, failureReason = null) {
     where: { id: Number(id) },
     data: {
       status: "failed",
+      processingStartedAt: null,
       failureReason: failureReason
         ? String(failureReason).slice(0, 1000)
         : null
+    }
+  });
+}
+
+
+async function markUncertain(id, failureReason = null) {
+  return prisma.scheduledPost.update({
+    where: { id: Number(id) },
+    data: {
+      status: "uncertain",
+      processingStartedAt: null,
+      failureReason: failureReason
+        ? String(failureReason).slice(0, 1000)
+        : "Telegram принял сообщение, но результат не подтверждён в базе"
     }
   });
 }
@@ -170,6 +275,7 @@ async function completeScheduledPublication({
       data: {
         status: "published",
         publishedAt: new Date(),
+        processingStartedAt: null,
         failureReason: null
       }
     });
@@ -211,6 +317,19 @@ async function countPendingByOwner(ownerId) {
   });
 }
 
+async function countFailedByOwner(ownerId) {
+  const channelIds = await ownerChannelIds(ownerId);
+
+  if (!channelIds.length) return 0;
+
+  return prisma.scheduledPost.count({
+    where: {
+      channelId: { in: channelIds },
+      status: { in: ["failed", "uncertain"] }
+    }
+  });
+}
+
 async function countRecurringByOwner(ownerId) {
   const channelIds = await ownerChannelIds(ownerId);
 
@@ -245,16 +364,23 @@ async function countByOwnerRange(ownerId, from, to) {
 module.exports = {
   createScheduledPost,
   listPendingByOwner,
+  listFailedByOwner,
   listByOwnerRange,
   findScheduledForOwner,
   updateScheduledForOwner,
   cancelScheduledForOwner,
-  findDuePosts,
+  queuePublishNow,
+  retryFailedForOwner,
+  findDuePostIds,
+  claimScheduledPost,
+  recoverStuckProcessing,
   findUpcomingReminderCandidates,
   markReminderSent,
   markFailed,
+  markUncertain,
   completeScheduledPublication,
   countPendingByOwner,
+  countFailedByOwner,
   countRecurringByOwner,
   countByOwnerRange
 };

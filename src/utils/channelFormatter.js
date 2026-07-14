@@ -1,5 +1,5 @@
 function formatDateTime(date) {
-  if (!date) return "нет данных";
+  if (!date) return "не проверялось";
 
   return new Date(date).toLocaleString("ru-RU", {
     day: "2-digit",
@@ -16,6 +16,13 @@ function buildChannelCard(data) {
     ? `@${channel.username}`
     : "без username";
 
+  const permissionStatus =
+    channel.lastPermissionOk === true
+      ? "✅ готов к публикации"
+      : channel.lastPermissionOk === false
+        ? "⚠️ требуется проверка прав"
+        : "➖ ещё не проверялся";
+
   return [
     "📢 Управление каналом",
     "",
@@ -24,13 +31,19 @@ function buildChannelCard(data) {
     `Telegram ID: ${channel.telegramId}`,
     `Подключён: ${formatDateTime(channel.createdAt)}`,
     "",
+    `🔐 Права: ${permissionStatus}`,
+    `Последняя проверка: ${formatDateTime(channel.lastPermissionCheckAt)}`,
+    channel.lastPermissionSummary
+      ? `Результат: ${channel.lastPermissionSummary}`
+      : "",
+    "",
     "━━━━━━━━━━━━━━━━━━",
     "",
     `📝 Опубликовано постов: ${data.postCount}`,
     `📄 Черновиков: ${data.draftCount}`,
     `⏰ В очереди: ${data.scheduledCount}`,
     `📊 Снимков аналитики: ${data.snapshotCount}`
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 module.exports = {

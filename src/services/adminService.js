@@ -56,6 +56,7 @@ async function buildAdminStatistics() {
       `Опубликовано постов: ${formatNumber(stats.totalPosts)}`,
       `Черновиков: ${formatNumber(stats.totalDrafts)}`,
       `Ожидают публикации: ${formatNumber(stats.pendingScheduledPosts)}`,
+      `Новая обратная связь: ${formatNumber(stats.newFeedbackCount)}`,
       "",
       `🆕 Последний пользователь: ${formatUser(stats.lastRegisteredUser)}`,
       "",

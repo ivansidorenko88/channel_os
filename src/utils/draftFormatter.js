@@ -34,17 +34,23 @@ function buildDraftCard(draft) {
   ].join("\n");
 }
 
-function buildDraftListText(drafts) {
-  if (!drafts.length) {
+function buildDraftListText(result) {
+  if (!result.items.length) {
     return [
-      "📄 Черновики",
+      result.query
+        ? "🔎 Результаты поиска"
+        : "📄 Черновики",
       "",
-      "Черновиков пока нет.",
-      "Нажми «Создать пост», чтобы добавить первый."
+      result.query
+        ? `По запросу «${result.query}» ничего не найдено.`
+        : "Черновиков пока нет.",
+      result.query
+        ? ""
+        : "Нажми «Создать пост», чтобы добавить первый."
     ].join("\n");
   }
 
-  const rows = drafts.map((draft, index) => {
+  const rows = result.items.map((draft, index) => {
     const channel =
       draft.channel?.title || "канал не выбран";
     const category = draft.category
@@ -52,13 +58,18 @@ function buildDraftListText(drafts) {
       : "";
 
     return [
-      `${index + 1}. #${draft.id} · ${channel}${category}`,
-      draftContent(draft, 90)
+      `${result.page * result.pageSize + index + 1}. #${draft.id} · ${channel}${category}`,
+      `${draftContent(draft, 85)}`,
+      `🕒 ${formatDateTime(draft.updatedAt)}`
     ].join("\n");
   });
 
   return [
-    "📄 Мои черновики",
+    result.query
+      ? `🔎 Черновики: «${result.query}»`
+      : "📄 Мои черновики",
+    "",
+    `Найдено: ${result.total} · Страница ${result.page + 1}/${result.pages}`,
     "",
     ...rows
   ].join("\n\n");

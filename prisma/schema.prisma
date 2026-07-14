@@ -19,10 +19,14 @@ model User {
   notificationsEnabled      Boolean  @default(true)
   confirmBeforePublish      Boolean  @default(true)
   defaultCategory           String?
+  onboardingCompleted       Boolean  @default(false)
+  notifyOnSuccess           Boolean  @default(false)
+  notifyOnFailure           Boolean  @default(true)
 
   channels         Channel[]
   drafts           Draft[]
   contentTemplates ContentTemplate[]
+  feedbackItems    Feedback[]
 }
 
 model Channel {
@@ -34,7 +38,10 @@ model Channel {
   createdAt   DateTime @default(now())
   updatedAt      DateTime  @updatedAt
   isActive      Boolean   @default(true)
-  disconnectedAt DateTime?
+  disconnectedAt       DateTime?
+  lastPermissionCheckAt DateTime?
+  lastPermissionOk      Boolean?
+  lastPermissionSummary String?
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   drafts Draft[]
@@ -57,6 +64,8 @@ model Draft {
   fileId    String?
   caption   String?
   category  String?
+  status    String   @default("draft")
+  publishingStartedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -96,7 +105,10 @@ model ScheduledPost {
   recurrenceUntil DateTime?
   reminderMinutes Int       @default(30)
   reminderSentAt  DateTime?
-  failureReason   String?
+  failureReason       String?
+  attemptCount        Int       @default(0)
+  lastAttemptAt       DateTime?
+  processingStartedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   publishedAt     DateTime?
@@ -167,4 +179,19 @@ model ContentTemplate {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, updatedAt])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   @default("idea")
+  message   String
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }

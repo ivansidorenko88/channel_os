@@ -132,6 +132,20 @@ async function setDraftCategory(
   });
 }
 
+async function duplicateUserDraft(from, draftId) {
+  const user = await upsertUser(from);
+
+  return draftRepository.duplicateDraft({
+    userId: user.id,
+    draftId
+  });
+}
+
+async function listUserDraftsPage(from, options = {}) {
+  const user = await upsertUser(from);
+  return draftRepository.listDraftsPage(user.id, options);
+}
+
 async function listUserDrafts(from, take = 20) {
   const user = await upsertUser(from);
   return draftRepository.listDrafts(user.id, take);
@@ -154,6 +168,8 @@ module.exports = {
   replaceDraftContent,
   getUserDraft,
   setDraftCategory,
+  duplicateUserDraft,
+  listUserDraftsPage,
   listUserDrafts,
   removeDraft
 };

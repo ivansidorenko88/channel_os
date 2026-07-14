@@ -19,6 +19,7 @@ async function getAdminStatistics() {
     totalPosts,
     totalDrafts,
     pendingScheduledPosts,
+    newFeedbackCount,
     lastRegisteredUser
   ] = await Promise.all([
     prisma.user.count(),
@@ -39,6 +40,9 @@ async function getAdminStatistics() {
     prisma.draft.count(),
     prisma.scheduledPost.count({
       where: { status: "pending" }
+    }),
+    prisma.feedback.count({
+      where: { status: "new" }
     }),
     prisma.user.findFirst({
       orderBy: { createdAt: "desc" },
@@ -62,6 +66,7 @@ async function getAdminStatistics() {
     totalPosts,
     totalDrafts,
     pendingScheduledPosts,
+    newFeedbackCount,
     lastRegisteredUser
   };
 }

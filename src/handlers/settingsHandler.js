@@ -7,6 +7,8 @@ const {
   getSettings,
   setDefaultReminder,
   toggleNotifications,
+  toggleSuccessNotifications,
+  toggleFailureNotifications,
   togglePublishConfirmation,
   setDefaultCategory,
   clearDefaultCategory,
@@ -98,6 +100,24 @@ function registerSettingsHandler(bot) {
   );
 
   bot.action(
+    "settings:toggle_success",
+    async (ctx) => {
+      await ctx.answerCbQuery("Настройка сохранена");
+      await toggleSuccessNotifications(ctx.from);
+      return showSettings(ctx);
+    }
+  );
+
+  bot.action(
+    "settings:toggle_failure",
+    async (ctx) => {
+      await ctx.answerCbQuery("Настройка сохранена");
+      await toggleFailureNotifications(ctx.from);
+      return showSettings(ctx);
+    }
+  );
+
+  bot.action(
     "settings:toggle_confirmation",
     async (ctx) => {
       await ctx.answerCbQuery("Настройка сохранена");
@@ -154,7 +174,9 @@ function registerSettingsHandler(bot) {
           "• напоминание за 30 минут;",
           "• уведомления включены;",
           "• подтверждение публикации включено;",
-          "• рубрика по умолчанию удалена."
+          "• рубрика по умолчанию удалена;",
+          "• уведомления об успехе выключены;",
+          "• уведомления об ошибках включены."
         ].join("\n"),
         resetSettingsKeyboard()
       );

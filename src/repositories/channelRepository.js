@@ -146,6 +146,26 @@ async function disconnectChannel(ownerId, channelId) {
   });
 }
 
+
+async function recordChannelPermissionCheck(
+  ownerId,
+  channelId,
+  result
+) {
+  const channel = await findChannel(ownerId, channelId);
+
+  if (!channel) return null;
+
+  return prisma.channel.update({
+    where: { id: channel.id },
+    data: {
+      lastPermissionCheckAt: new Date(),
+      lastPermissionOk: Boolean(result.ok),
+      lastPermissionSummary: String(result.summary || "").slice(0, 1000)
+    }
+  });
+}
+
 module.exports = {
   upsertChannel,
   listChannels,
@@ -154,5 +174,6 @@ module.exports = {
   findChannelByTelegramId,
   listAllChannels,
   getChannelManagementStats,
-  disconnectChannel
+  disconnectChannel,
+  recordChannelPermissionCheck
 };

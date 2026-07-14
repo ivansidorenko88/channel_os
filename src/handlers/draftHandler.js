@@ -21,7 +21,8 @@ const {
   selectDraftChannel,
   replaceDraftContent,
   getUserDraft,
-  listUserDrafts,
+  duplicateUserDraft,
+  listUserDraftsPage,
   removeDraft
 } = require("../services/draftService");
 const {
@@ -37,6 +38,8 @@ const {
   buildDraftCard,
   buildDraftListText
 } = require("../utils/draftFormatter");
+
+const draftSearches = new Map();
 
 function isEditFallbackError(error) {
   const description =
@@ -66,16 +69,45 @@ async function showScreen(ctx, text, keyboard) {
   return ctx.reply(text, keyboard);
 }
 
-async function renderDraftList(ctx) {
-  const drafts = await listUserDrafts(
+async function renderDraftList(
+  ctx,
+  {
+    page = 0,
+    query = null
+  } = {}
+) {
+  const savedQuery =
+    query === null
+      ? draftSearches.get(String(ctx.from.id)) || ""
+      : String(query || "").trim();
+
+  if (query !== null) {
+    if (savedQuery) {
+      draftSearches.set(
+        String(ctx.from.id),
+        savedQuery
+      );
+    } else {
+      draftSearches.delete(String(ctx.from.id));
+    }
+  }
+
+  const result = await listUserDraftsPage(
     ctx.from,
-    20
+    {
+      page,
+      pageSize: 6,
+      query: savedQuery
+    }
   );
 
   return showScreen(
     ctx,
-    buildDraftListText(drafts),
-    draftListKeyboard(drafts)
+    buildDraftListText(result),
+    draftListKeyboard(
+      result,
+      Boolean(savedQuery)
+    )
   );
 }
 
@@ -130,12 +162,72 @@ async function executePublish(ctx, draftId) {
 
 function registerDraftHandler(bot) {
   bot.command("drafts", async (ctx) => {
-    return renderDraftList(ctx);
+    draftSearches.delete(String(ctx.from.id));
+    return renderDraftList(ctx, {
+      page: 0,
+      query: ""
+    });
   });
 
   bot.action("draft:list", async (ctx) => {
     await ctx.answerCbQuery();
-    return renderDraftList(ctx);
+    draftSearches.delete(String(ctx.from.id));
+    return renderDraftList(ctx, {
+      page: 0,
+      query: ""
+    });
+  });
+
+  bot.action(
+    /^draft:list:page:(\d+)$/,
+    async (ctx) => {
+      await ctx.answerCbQuery();
+      return renderDraftList(ctx, {
+        page: Number(ctx.match[1]),
+        query: ""
+      });
+    }
+  );
+
+  bot.action(
+    /^draft:list:search_page:(\d+)$/,
+    async (ctx) => {
+      await ctx.answerCbQuery();
+      return renderDraftList(ctx, {
+        page: Number(ctx.match[1])
+      });
+    }
+  );
+
+  bot.action("draft:list:no_op", async (ctx) => {
+    await ctx.answerCbQuery();
+  });
+
+  bot.action("draft:search", async (ctx) => {
+    await ctx.answerCbQuery();
+
+    setState(
+      ctx.from.id,
+      "WAITING_DRAFT_SEARCH"
+    );
+
+    return ctx.reply(
+      [
+        "🔎 Поиск по черновикам",
+        "",
+        "Отправь часть текста или название рубрики.",
+        "Для отмены нажми /cancel"
+      ].join("\n")
+    );
+  });
+
+  bot.action("draft:search_clear", async (ctx) => {
+    await ctx.answerCbQuery("Поиск сброшен");
+    draftSearches.delete(String(ctx.from.id));
+    return renderDraftList(ctx, {
+      page: 0,
+      query: ""
+    });
   });
 
   bot.action("draft:create", async (ctx) => {
@@ -165,6 +257,27 @@ function registerDraftHandler(bot) {
       return renderDraft(
         ctx,
         Number(ctx.match[1])
+      );
+    }
+  );
+
+  bot.action(
+    /^draft:duplicate:(\d+)$/,
+    async (ctx) => {
+      await ctx.answerCbQuery("Черновик скопирован");
+
+      const draft = await duplicateUserDraft(
+        ctx.from,
+        Number(ctx.match[1])
+      );
+
+      if (!draft) {
+        return renderDraftList(ctx);
+      }
+
+      return ctx.reply(
+        `✅ Создана копия — черновик #${draft.id}.`,
+        draftActionsKeyboard(draft.id)
       );
     }
   );
@@ -460,6 +573,24 @@ function registerDraftHandler(bot) {
 
       if (
         currentState.state ===
+        "WAITING_DRAFT_SEARCH"
+      ) {
+        if (!ctx.message.text) {
+          return ctx.reply(
+            "❌ Поисковый запрос нужно отправить текстом."
+          );
+        }
+
+        clearState(ctx.from.id);
+
+        return renderDraftList(ctx, {
+          page: 0,
+          query: ctx.message.text
+        });
+      }
+
+      if (
+        currentState.state ===
         "WAITING_DRAFT_CONTENT"
       ) {
         const draft =
@@ -539,5 +670,6 @@ function registerDraftHandler(bot) {
 }
 
 module.exports = {
-  registerDraftHandler
+  registerDraftHandler,
+  renderDraftList
 };

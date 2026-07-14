@@ -29,6 +29,22 @@ async function toggleNotifications(from) {
   });
 }
 
+async function toggleSuccessNotifications(from) {
+  const user = await upsertUser(from);
+
+  return updateUserSettings(user.id, {
+    notifyOnSuccess: !user.notifyOnSuccess
+  });
+}
+
+async function toggleFailureNotifications(from) {
+  const user = await upsertUser(from);
+
+  return updateUserSettings(user.id, {
+    notifyOnFailure: !user.notifyOnFailure
+  });
+}
+
 async function togglePublishConfirmation(from) {
   const user = await upsertUser(from);
 
@@ -64,6 +80,8 @@ module.exports = {
   getSettings,
   setDefaultReminder,
   toggleNotifications,
+  toggleSuccessNotifications,
+  toggleFailureNotifications,
   togglePublishConfirmation,
   setDefaultCategory,
   clearDefaultCategory,

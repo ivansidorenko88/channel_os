@@ -15,13 +15,15 @@ function buildSettingsText(settings) {
     "━━━━━━━━━━━━━━━━━━",
     "",
     `🔔 Напоминание по умолчанию: ${reminderLabel(settings.defaultReminderMinutes)}`,
-    `📨 Личные уведомления: ${enabled(settings.notificationsEnabled)}`,
-    `✅ Подтверждение публикации: ${enabled(settings.confirmBeforePublish)}`,
+    `📨 Все личные уведомления: ${enabled(settings.notificationsEnabled)}`,
+    `✅ Успешная публикация: ${enabled(settings.notifyOnSuccess)}`,
+    `❌ Ошибка публикации: ${enabled(settings.notifyOnFailure)}`,
+    `🛡 Подтверждение публикации: ${enabled(settings.confirmBeforePublish)}`,
     `🏷 Рубрика по умолчанию: ${settings.defaultCategory || "не задана"}`,
     "",
     "━━━━━━━━━━━━━━━━━━",
     "",
-    "Напоминание применяется к новым постам. У уже запланированных публикаций его можно изменить отдельно."
+    "Общий переключатель уведомлений имеет приоритет над отдельными уведомлениями."
   ].join("\n");
 }
 

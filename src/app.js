@@ -4,6 +4,7 @@ const { isExpiredCallbackError } = require("./utils/safeCallback");
 const { callbackSafety } = require("./middleware/callbackSafety");
 
 const { registerStartHandler } = require("./handlers/startHandler");
+const { registerOnboardingHandler } = require("./handlers/onboardingHandler");
 const { registerDashboardHandler } = require("./handlers/dashboardHandler");
 const { registerChannelHandler } = require("./handlers/channelHandler");
 const { registerDraftHandler } = require("./handlers/draftHandler");
@@ -12,6 +13,7 @@ const { registerScheduleHandler } = require("./handlers/scheduleHandler");
 const { registerAnalyticsHandler } = require("./handlers/analyticsHandler");
 const { registerMemberHandler } = require("./handlers/memberHandler");
 const { registerSettingsHandler } = require("./handlers/settingsHandler");
+const { registerFeedbackHandler } = require("./handlers/feedbackHandler");
 const { registerDebugHandler } = require("./handlers/debugHandler");
 const { registerAdminHandler } = require("./handlers/adminHandler");
 const { startPublisherScheduler } = require("./scheduler/publisher");
@@ -39,6 +41,7 @@ bot.catch((error, ctx) => {
 
 registerDashboardHandler(bot);
 registerStartHandler(bot);
+registerOnboardingHandler(bot);
 registerChannelHandler(bot);
 registerContentPlanHandler(bot);
 registerDraftHandler(bot);
@@ -46,6 +49,7 @@ registerScheduleHandler(bot);
 registerAnalyticsHandler(bot);
 registerMemberHandler(bot);
 registerSettingsHandler(bot);
+registerFeedbackHandler(bot);
 registerDebugHandler(bot);
 registerAdminHandler(bot);
 
@@ -63,7 +67,7 @@ bot.launch({
   ]
 });
 
-console.log("Channel OS v0.4.1 Management & Settings started");
+console.log("Channel OS v0.4.2 Product Polish started");
 console.log(`[Admin] Loaded administrator IDs: ${ADMIN_IDS.length}`);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));

@@ -5,8 +5,12 @@ const {
   upsertChannel,
   listChannels,
   getChannelManagementStats,
-  disconnectChannel
+  disconnectChannel,
+  recordChannelPermissionCheck
 } = require("../repositories/channelRepository");
+const {
+  checkChannelPermissions
+} = require("./channelPermissionService");
 
 async function connectChannelFromForward(ctx) {
   const forwardedChat =
@@ -32,7 +36,34 @@ async function connectChannelFromForward(ctx) {
     username: forwardedChat.username || null
   });
 
-  return { ok: true, channel };
+  let permissions = null;
+
+  try {
+    permissions = await checkChannelPermissions(
+      ctx.telegram,
+      channel.telegramId
+    );
+
+    await recordChannelPermissionCheck(
+      user.id,
+      channel.id,
+      permissions
+    );
+  } catch (error) {
+    permissions = {
+      ok: false,
+      summary: error.message,
+      error: error.message
+    };
+
+    await recordChannelPermissionCheck(
+      user.id,
+      channel.id,
+      permissions
+    );
+  }
+
+  return { ok: true, channel, permissions };
 }
 
 async function getUserChannels(from) {
@@ -49,6 +80,36 @@ async function getManagedChannel(from, channelId) {
   );
 }
 
+async function checkManagedChannelPermissions(
+  telegram,
+  from,
+  channelId
+) {
+  const user = await upsertUser(from);
+  const data = await getChannelManagementStats(
+    user.id,
+    channelId
+  );
+
+  if (!data || !data.channel.isActive) return null;
+
+  const result = await checkChannelPermissions(
+    telegram,
+    data.channel.telegramId
+  );
+
+  await recordChannelPermissionCheck(
+    user.id,
+    data.channel.id,
+    result
+  );
+
+  return {
+    channel: data.channel,
+    result
+  };
+}
+
 async function removeUserChannel(from, channelId) {
   const user = await upsertUser(from);
 
@@ -62,5 +123,6 @@ module.exports = {
   connectChannelFromForward,
   getUserChannels,
   getManagedChannel,
+  checkManagedChannelPermissions,
   removeUserChannel
 };

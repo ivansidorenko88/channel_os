@@ -229,6 +229,24 @@ async function setScheduledCategory(
   );
 }
 
+async function queueScheduledNow(from, scheduledId) {
+  const user = await upsertUser(from);
+
+  return scheduledRepository.queuePublishNow(
+    user.id,
+    scheduledId
+  );
+}
+
+async function retryScheduledForUser(from, scheduledId) {
+  const user = await upsertUser(from);
+
+  return scheduledRepository.retryFailedForOwner(
+    user.id,
+    scheduledId
+  );
+}
+
 async function cancelScheduledForUser(from, scheduledId) {
   const user = await upsertUser(from);
 
@@ -252,5 +270,7 @@ module.exports = {
   setScheduledRecurrence,
   setScheduledReminder,
   setScheduledCategory,
+  queueScheduledNow,
+  retryScheduledForUser,
   cancelScheduledForUser
 };

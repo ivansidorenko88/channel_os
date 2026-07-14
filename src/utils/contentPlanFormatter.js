@@ -5,7 +5,18 @@ const RECURRENCE_LABELS = {
   monthly: "каждый месяц"
 };
 
+const STATUS_LABELS = {
+  pending: "⏳ ожидает",
+  processing: "🔄 публикуется",
+  published: "✅ опубликовано",
+  failed: "❌ ошибка",
+  uncertain: "⚠️ нужно проверить канал",
+  cancelled: "🚫 отменено"
+};
+
 function formatDateTime(date) {
+  if (!date) return "нет данных";
+
   return new Date(date).toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -40,13 +51,17 @@ function reminderLabel(minutes) {
   return `за ${value} минут`;
 }
 
+function statusLabel(value) {
+  return STATUS_LABELS[value] || value || "неизвестно";
+}
+
 function buildContentPlanText(summary) {
   const next = summary.nextPublication
     ? `${summary.nextPublication.channel.title} — ${formatDateTime(summary.nextPublication.scheduledAt)}`
     : "нет";
 
   return [
-    "📅 Channel OS — Content Plan v0.4",
+    "📅 Channel OS — Content Plan v0.4.2",
     "",
     "Единый центр управления публикациями.",
     "",
@@ -55,6 +70,7 @@ function buildContentPlanText(summary) {
     `📍 Сегодня: ${summary.todayCount}`,
     `🗓 На 7 дней: ${summary.weekCount}`,
     `📚 Всего в очереди: ${summary.pendingCount}`,
+    `❌ Требуют внимания: ${summary.failedCount}`,
     `🔁 Повторяющихся: ${summary.recurringCount}`,
     `📄 Черновиков: ${summary.draftCount}`,
     `🧩 Шаблонов: ${summary.templateCount}`,
@@ -72,7 +88,7 @@ function buildPlanListText(items, title) {
     return [
       title,
       "",
-      "Публикаций в этом периоде пока нет."
+      "Публикаций в этом разделе пока нет."
     ].join("\n");
   }
 
@@ -88,6 +104,7 @@ function buildPlanListText(items, title) {
 
     return [
       `${index + 1}. ${item.channel.title}`,
+      `📊 ${statusLabel(item.status)}`,
       `🕒 ${formatDateTime(item.scheduledAt)}${repeat}`,
       `📝 ${previewContent(item, 90)}${category}`
     ].join("\n");
@@ -98,7 +115,7 @@ function buildPlanListText(items, title) {
 
 function buildScheduledItemText(item) {
   return [
-    "📌 Запланированная публикация",
+    "📌 Публикация",
     "",
     `📢 Канал: ${item.channel.title}`,
     `🕒 Время: ${formatDateTime(item.scheduledAt)}`,
@@ -106,12 +123,16 @@ function buildScheduledItemText(item) {
     `🏷 Рубрика: ${item.category || "не указана"}`,
     `🔁 Повтор: ${recurrenceLabel(item.recurrence)}`,
     `🔔 Напоминание: ${reminderLabel(item.reminderMinutes)}`,
-    `📊 Статус: ${item.status}`,
+    `📊 Статус: ${statusLabel(item.status)}`,
+    `🔄 Попыток отправки: ${item.attemptCount || 0}`,
+    item.failureReason
+      ? `⚠️ Ошибка: ${String(item.failureReason).slice(0, 500)}`
+      : "",
     "",
     "━━━━━━━━━━━━━━━━━━",
     "",
     previewContent(item, 500)
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function buildTemplateText(template) {
@@ -130,6 +151,7 @@ module.exports = {
   previewContent,
   recurrenceLabel,
   reminderLabel,
+  statusLabel,
   buildContentPlanText,
   buildPlanListText,
   buildScheduledItemText,
